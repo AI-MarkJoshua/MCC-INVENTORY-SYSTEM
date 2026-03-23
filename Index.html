@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Inventory System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>Inventory System</h1>
+
+<input type="text" id="name" placeholder="Item Name">
+<input type="number" id="qty" placeholder="Quantity">
+
+<button onclick="addStock()">IN</button>
+<button onclick="removeStock()">OUT</button>
+
+<h2>Items</h2>
+<ul id="list"></ul>
+
+<!-- Supabase CDN (v2) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="script.js"></script>
+
+</body>
+</html>
