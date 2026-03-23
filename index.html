@@ -1,25 +1,142 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Inventory System</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockKeeper</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<h1>Inventory System</h1>
+<!-- AUTH SCREEN -->
+<div id="auth-screen" class="screen active">
+    <div class="auth-brand">
+        <div class="brand-icon">▣</div>
+        <h1 class="brand-name">StockKeeper</h1>
+        <p class="brand-tagline">Inventory, under control.</p>
+    </div>
 
-<input type="text" id="name" placeholder="Item Name">
-<input type="number" id="qty" placeholder="Quantity">
+    <div class="auth-card">
+        <div class="tab-bar">
+            <button class="tab active" onclick="switchTab('login')">Sign In</button>
+            <button class="tab" onclick="switchTab('register')">Create Account</button>
+        </div>
 
-<button onclick="addStock()">IN</button>
-<button onclick="removeStock()">OUT</button>
+        <!-- LOGIN FORM -->
+        <div id="login-form" class="auth-form active">
+            <div class="field">
+                <label>Email</label>
+                <input type="email" id="login-email" placeholder="you@example.com">
+            </div>
+            <div class="field">
+                <label>Password</label>
+                <input type="password" id="login-password" placeholder="••••••••">
+            </div>
+            <button class="btn-primary" onclick="login()">
+                <span class="btn-text">Sign In</span>
+                <span class="btn-loader" style="display:none">...</span>
+            </button>
+            <p id="login-error" class="form-error"></p>
+        </div>
 
-<h2>Items</h2>
-<ul id="list"></ul>
+        <!-- REGISTER FORM -->
+        <div id="register-form" class="auth-form">
+            <div class="field">
+                <label>Full Name</label>
+                <input type="text" id="reg-name" placeholder="Juan dela Cruz">
+            </div>
+            <div class="field">
+                <label>Email</label>
+                <input type="email" id="reg-email" placeholder="you@example.com">
+            </div>
+            <div class="field">
+                <label>Password</label>
+                <input type="password" id="reg-password" placeholder="Min. 6 characters">
+            </div>
+            <button class="btn-primary" onclick="register()">
+                <span class="btn-text">Create Account</span>
+                <span class="btn-loader" style="display:none">...</span>
+            </button>
+            <p id="reg-error" class="form-error"></p>
+            <p id="reg-success" class="form-success"></p>
+        </div>
+    </div>
+</div>
 
-<!-- Supabase CDN (v2) -->
+<!-- INVENTORY SCREEN -->
+<div id="app-screen" class="screen">
+    <header class="app-header">
+        <div class="header-left">
+            <span class="brand-icon-sm">▣</span>
+            <span class="header-title">StockKeeper</span>
+        </div>
+        <div class="header-right">
+            <span id="user-label" class="user-label"></span>
+            <button class="btn-logout" onclick="logout()">Sign Out</button>
+        </div>
+    </header>
+
+    <main class="app-main">
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-num" id="stat-total">—</div>
+                <div class="stat-label">Total Items</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num" id="stat-qty">—</div>
+                <div class="stat-label">Total Units</div>
+            </div>
+            <div class="stat-card warn">
+                <div class="stat-num" id="stat-low">—</div>
+                <div class="stat-label">Low Stock</div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2 class="panel-title">Stock Entry</h2>
+            <div class="input-row">
+                <div class="field">
+                    <label>Item Name</label>
+                    <input type="text" id="name" placeholder="e.g. Ballpen, Rice, etc.">
+                </div>
+                <div class="field field-sm">
+                    <label>Quantity</label>
+                    <input type="number" id="qty" placeholder="0" min="1">
+                </div>
+            </div>
+            <div class="btn-row">
+                <button class="btn-in" onclick="addStock()">▲ Stock In</button>
+                <button class="btn-out" onclick="removeStock()">▼ Stock Out</button>
+            </div>
+            <p id="action-msg" class="action-msg"></p>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <h2 class="panel-title">Inventory</h2>
+                <input type="text" id="search" placeholder="Search items..." oninput="filterItems()" class="search-input">
+            </div>
+            <div class="table-wrap">
+                <table id="items-table">
+                    <thead>
+                        <tr>
+                            <th>Item Name</th>
+                            <th>Quantity</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="items-body">
+                        <tr><td colspan="3" class="empty-row">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="script.js"></script>
-
 </body>
 </html>
