@@ -3,137 +3,218 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StockKeeper</title>
+    <title>MCC Bike Inventory</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<!-- AUTH SCREEN -->
-<div id="auth-screen" class="screen active">
-    <div class="auth-brand">
-        <div class="brand-icon">▣</div>
-        <h1 class="brand-name">StockKeeper</h1>
-        <p class="brand-tagline">Inventory, under control.</p>
-    </div>
-
-    <div class="auth-card">
-        <div class="tab-bar">
-            <button class="tab active" onclick="switchTab('login')">Sign In</button>
-            <button class="tab" onclick="switchTab('register')">Create Account</button>
+<!-- ── LOGIN SCREEN ─────────────────────────────────── -->
+<div id="login-screen" class="screen active">
+    <div class="login-wrap">
+        <div class="login-brand">
+            <div class="brand-logo">⚙</div>
+            <h1>MCC<span>Inventory</span></h1>
+            <p>Bike Parts &amp; Supplies System</p>
         </div>
-
-        <!-- LOGIN FORM -->
-        <div id="login-form" class="auth-form active">
+        <div class="login-card">
+            <h2>Sign In</h2>
+            <p class="login-sub">Enter your credentials to continue</p>
             <div class="field">
-                <label>Email</label>
+                <label>Email Address</label>
                 <input type="email" id="login-email" placeholder="you@example.com">
             </div>
             <div class="field">
                 <label>Password</label>
-                <input type="password" id="login-password" placeholder="••••••••">
+                <input type="password" id="login-password" placeholder="••••••••"
+                    onkeydown="if(event.key==='Enter') login()">
             </div>
-            <button class="btn-primary" onclick="login()">
+            <button class="btn-primary full" id="login-btn" onclick="login()">
                 <span class="btn-text">Sign In</span>
-                <span class="btn-loader" style="display:none">...</span>
+                <span class="btn-loader" style="display:none">Signing in...</span>
             </button>
             <p id="login-error" class="form-error"></p>
-        </div>
-
-        <!-- REGISTER FORM -->
-        <div id="register-form" class="auth-form">
-            <div class="field">
-                <label>Full Name</label>
-                <input type="text" id="reg-name" placeholder="Juan dela Cruz">
-            </div>
-            <div class="field">
-                <label>Email</label>
-                <input type="email" id="reg-email" placeholder="you@example.com">
-            </div>
-            <div class="field">
-                <label>Password</label>
-                <input type="password" id="reg-password" placeholder="Min. 6 characters">
-            </div>
-            <button class="btn-primary" onclick="register()">
-                <span class="btn-text">Create Account</span>
-                <span class="btn-loader" style="display:none">...</span>
-            </button>
-            <p id="reg-error" class="form-error"></p>
-            <p id="reg-success" class="form-success"></p>
         </div>
     </div>
 </div>
 
-<!-- INVENTORY SCREEN -->
+<!-- ── APP SCREEN ────────────────────────────────────── -->
 <div id="app-screen" class="screen">
+
     <header class="app-header">
         <div class="header-left">
-            <span class="brand-icon-sm">▣</span>
-            <span class="header-title">StockKeeper</span>
+            <span class="header-logo">⚙</span>
+            <div>
+                <span class="header-title">MCC Inventory</span>
+                <span id="role-badge" class="role-badge"></span>
+            </div>
         </div>
         <div class="header-right">
             <span id="user-label" class="user-label"></span>
-            <button class="btn-logout" onclick="logout()">Sign Out</button>
+            <button class="btn-signout" onclick="logout()">Sign Out</button>
         </div>
     </header>
 
-    <main class="app-main">
-        <div class="stats-row">
-            <div class="stat-card">
-                <div class="stat-num" id="stat-total">—</div>
-                <div class="stat-label">Total Items</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-num" id="stat-qty">—</div>
-                <div class="stat-label">Total Units</div>
-            </div>
-            <div class="stat-card warn">
-                <div class="stat-num" id="stat-low">—</div>
-                <div class="stat-label">Low Stock</div>
-            </div>
-        </div>
+    <nav class="app-nav">
+        <button class="nav-tab active" onclick="switchView('inventory')" id="tab-inventory">📦 Inventory</button>
+        <button class="nav-tab" onclick="switchView('accounts')" id="tab-accounts" style="display:none">👥 Accounts</button>
+    </nav>
 
-        <div class="panel">
-            <h2 class="panel-title">Stock Entry</h2>
-            <div class="input-row">
-                <div class="field">
-                    <label>Item Name</label>
-                    <input type="text" id="name" placeholder="e.g. Ballpen, Rice, etc.">
-                </div>
-                <div class="field field-sm">
-                    <label>Quantity</label>
-                    <input type="number" id="qty" placeholder="0" min="1">
-                </div>
-            </div>
-            <div class="btn-row">
-                <button class="btn-in" onclick="addStock()">▲ Stock In</button>
-                <button class="btn-out" onclick="removeStock()">▼ Stock Out</button>
-            </div>
-            <p id="action-msg" class="action-msg"></p>
-        </div>
+    <!-- INVENTORY VIEW -->
+    <div id="view-inventory" class="view active">
+        <div class="app-main">
 
-        <div class="panel">
-            <div class="panel-header">
-                <h2 class="panel-title">Inventory</h2>
-                <input type="text" id="search" placeholder="Search items..." oninput="filterItems()" class="search-input">
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-num" id="stat-total">—</div>
+                    <div class="stat-label">Total Items</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-num" id="stat-qty">—</div>
+                    <div class="stat-label">Total Units</div>
+                </div>
+                <div class="stat-card warn">
+                    <div class="stat-num" id="stat-low">—</div>
+                    <div class="stat-label">Low Stock</div>
+                </div>
+                <div class="stat-card danger">
+                    <div class="stat-num" id="stat-out">—</div>
+                    <div class="stat-label">Out of Stock</div>
+                </div>
             </div>
-            <div class="table-wrap">
-                <table id="items-table">
-                    <thead>
-                        <tr>
-                            <th>Item Name</th>
-                            <th>Quantity</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="items-body">
-                        <tr><td colspan="3" class="empty-row">Loading...</td></tr>
-                    </tbody>
-                </table>
+
+            <!-- STOCK ENTRY (admin + staff) -->
+            <div class="panel" id="stock-entry-panel">
+                <h2 class="panel-title">Stock Entry</h2>
+                <div class="input-row">
+                    <div class="field flex2">
+                        <label>Item Name</label>
+                        <input type="text" id="item-name" placeholder="e.g. Chain, Saddle, Wheel 26" list="items-datalist">
+                        <datalist id="items-datalist"></datalist>
+                    </div>
+                    <div class="field flex1">
+                        <label>Category</label>
+                        <select id="item-category">
+                            <option value="">-- Category --</option>
+                            <option>Chain</option>
+                            <option>Seat / Saddle</option>
+                            <option>Wheels</option>
+                            <option>Brakes</option>
+                            <option>Pedals</option>
+                            <option>Handlebars</option>
+                            <option>Frame</option>
+                            <option>Tires</option>
+                            <option>Gears / Derailleur</option>
+                            <option>Lights</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <div class="field flex1">
+                        <label>Quantity</label>
+                        <input type="number" id="item-qty" placeholder="0" min="1">
+                    </div>
+                </div>
+                <div class="btn-row">
+                    <button class="btn-in" onclick="addStock()">▲ Stock In</button>
+                    <button class="btn-out" onclick="removeStock()">▼ Stock Out</button>
+                </div>
+                <p id="action-msg" class="action-msg"></p>
+            </div>
+
+            <!-- INVENTORY TABLE -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">Parts Inventory</h2>
+                    <div class="search-wrap">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="search" placeholder="Search parts..." oninput="filterItems()">
+                    </div>
+                </div>
+                <div class="filter-row">
+                    <button class="filter-btn active" onclick="filterByCategory('', this)">All</button>
+                    <button class="filter-btn" onclick="filterByCategory('Chain', this)">Chain</button>
+                    <button class="filter-btn" onclick="filterByCategory('Seat / Saddle', this)">Seat</button>
+                    <button class="filter-btn" onclick="filterByCategory('Wheels', this)">Wheels</button>
+                    <button class="filter-btn" onclick="filterByCategory('Brakes', this)">Brakes</button>
+                    <button class="filter-btn" onclick="filterByCategory('Tires', this)">Tires</button>
+                    <button class="filter-btn" onclick="filterByCategory('Other', this)">Other</button>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Item Name</th>
+                                <th>Category</th>
+                                <th>Qty</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="items-body">
+                            <tr><td colspan="4" class="empty-row">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ACCOUNTS VIEW (admin only) -->
+    <div id="view-accounts" class="view">
+        <div class="app-main">
+            <div class="panel">
+                <h2 class="panel-title">Create New Account</h2>
+                <div class="input-row">
+                    <div class="field flex2">
+                        <label>Full Name</label>
+                        <input type="text" id="new-name" placeholder="e.g. Maria Santos">
+                    </div>
+                    <div class="field flex2">
+                        <label>Email</label>
+                        <input type="email" id="new-email" placeholder="staff@mcc.com">
+                    </div>
+                    <div class="field flex1">
+                        <label>Role</label>
+                        <select id="new-role">
+                            <option value="staff">Staff</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <div class="field flex2">
+                        <label>Password</label>
+                        <input type="password" id="new-password" placeholder="Min. 6 characters">
+                    </div>
+                </div>
+                <button class="btn-primary" id="create-btn" onclick="createAccount()">
+                    <span class="btn-text">+ Create Account</span>
+                    <span class="btn-loader" style="display:none">Creating...</span>
+                </button>
+                <p id="create-error" class="form-error"></p>
+                <p id="create-success" class="form-success"></p>
+            </div>
+
+            <div class="panel">
+                <h2 class="panel-title">All Accounts</h2>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Date Created</th>
+                            </tr>
+                        </thead>
+                        <tbody id="accounts-body">
+                            <tr><td colspan="4" class="empty-row">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
-    </main>
+    </div>
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
