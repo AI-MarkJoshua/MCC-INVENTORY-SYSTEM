@@ -112,6 +112,9 @@ async function initApp(user) {
 
 // ── SESSION CHECK ─────────────────────────────────────────
 (async () => {
+    // Always show login screen first while checking session
+    showScreen('login-screen');
+
     const { data } = await supabaseClient.auth.getSession();
     if (data.session) {
         await initApp(data.session.user);
