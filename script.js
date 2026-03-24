@@ -366,9 +366,56 @@ function updateStats(items) {
 }
 
 function updateDatalist(items) {
-    const dl = $('items-datalist');
-    if (!dl) return;
-    dl.innerHTML = items.map(i => `<option value="${escHtml(i.name)}">`).join('');
+    const dropdown = $('items-dropdown');
+    if (!dropdown) return;
+    
+    // Clear existing items
+    dropdown.innerHTML = '';
+    
+    if (items.length === 0) {
+        dropdown.innerHTML = '<div class="dropdown-item">No items found</div>';
+        return;
+    }
+    
+    // Add items to dropdown
+    items.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'dropdown-item';
+        div.textContent = item.name;
+        div.onclick = () => selectItem(item.name, item.category);
+        dropdown.appendChild(div);
+    });
+}
+
+function selectItem(name, category) {
+    const input = $('item-name');
+    const categorySelect = $('item-category');
+    const dropdown = $('items-dropdown');
+    const customDropdown = document.querySelector('.custom-dropdown');
+    
+    input.value = name;
+    
+    // Auto-populate category
+    if (category) {
+        const existingOpts = Array.from(categorySelect.options).map(o => o.value);
+        if (existingOpts.includes(category)) {
+            categorySelect.value = category;
+            $('custom-category-wrap').style.display = 'none';
+        } else {
+            categorySelect.value = '__custom__';
+            $('custom-category-wrap').style.display = 'block';
+            if ($('custom-category')) {
+                $('custom-category').value = category;
+            }
+        }
+    }
+    
+    // Close dropdown
+    dropdown.classList.remove('active');
+    customDropdown.classList.remove('active');
+    
+    // Trigger input event for any listeners
+    input.dispatchEvent(new Event('input'));
 }
 
 // ── SEARCH & FILTER ───────────────────────────────────────
@@ -493,19 +540,36 @@ function clearStockInputs() {
 // ── AUTO-POPULATE CATEGORY ON ITEM SELECTION ─────────────────────────────────────────────────
 function setupItemNameAutoComplete() {
     const itemNameInput = $('item-name');
-    if (!itemNameInput) return;
+    const dropdown = $('items-dropdown');
+    const customDropdown = document.querySelector('.custom-dropdown');
+    
+    if (!itemNameInput || !dropdown) return;
 
+    // Input event - filter dropdown
     itemNameInput.addEventListener('input', function() {
         const enteredName = this.value.trim();
-        if (!enteredName) return;
+        
+        if (enteredName) {
+            // Filter items based on input
+            const filteredItems = allItems.filter(item => 
+                item.name.toLowerCase().includes(enteredName.toLowerCase())
+            );
+            updateDatalist(filteredItems);
+            dropdown.classList.add('active');
+            customDropdown.classList.add('active');
+        } else {
+            // If input is empty, show all items or hide dropdown
+            updateDatalist(allItems);
+            dropdown.classList.remove('active');
+            customDropdown.classList.remove('active');
+        }
 
-        // Find matching item in inventory
+        // Auto-populate category if exact match
         const matchingItem = allItems.find(item => 
             item.name.toLowerCase() === enteredName.toLowerCase()
         );
 
         if (matchingItem && matchingItem.category) {
-            // Auto-populate category
             const categorySelect = $('item-category');
             const existingOpts = Array.from(categorySelect.options).map(o => o.value);
             
@@ -513,13 +577,82 @@ function setupItemNameAutoComplete() {
                 categorySelect.value = matchingItem.category;
                 $('custom-category-wrap').style.display = 'none';
             } else {
-                // Set to custom category if it's not in the dropdown
                 categorySelect.value = '__custom__';
                 $('custom-category-wrap').style.display = 'block';
                 if ($('custom-category')) {
                     $('custom-category').value = matchingItem.category;
                 }
             }
+        }
+    });
+
+    // Focus event - show all items
+    itemNameInput.addEventListener('focus', function() {
+        if (this.value.trim()) {
+            updateDatalist(allItems.filter(item => 
+                item.name.toLowerCase().includes(this.value.toLowerCase())
+            ));
+            dropdown.classList.add('active');
+            customDropdown.classList.add('active');
+        } else {
+            updateDatalist(allItems);
+            dropdown.classList.add('active');
+            customDropdown.classList.add('active');
+        }
+    });
+
+    // Click on dropdown arrow to toggle
+    const dropdownArrow = document.querySelector('.dropdown-arrow');
+    if (dropdownArrow) {
+        dropdownArrow.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (dropdown.classList.contains('active')) {
+                dropdown.classList.remove('active');
+                customDropdown.classList.remove('active');
+            } else {
+                updateDatalist(allItems);
+                dropdown.classList.add('active');
+                customDropdown.classList.add('active');
+            }
+        });
+    }
+
+    // Click outside to close dropdown
+    document.addEventListener('click', function(e) {
+        if (!customDropdown.contains(e.target)) {
+            dropdown.classList.remove('active');
+            customDropdown.classList.remove('active');
+        }
+    });
+
+    // Arrow key navigation
+    let selectedIndex = -1;
+    itemNameInput.addEventListener('keydown', function(e) {
+        const items = dropdown.querySelectorAll('.dropdown-item');
+        
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+            updateSelectedIndex(items, selectedIndex);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectedIndex = Math.max(selectedIndex - 1, 0);
+            updateSelectedIndex(items, selectedIndex);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (selectedIndex >= 0 && items[selectedIndex]) {
+                items[selectedIndex].click();
+            }
+        }
+    });
+}
+
+function updateSelectedIndex(items, selectedIndex) {
+    items.forEach((item, index) => {
+        if (index === selectedIndex) {
+            item.classList.add('selected');
+        } else {
+            item.classList.remove('selected');
         }
     });
 }
