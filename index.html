@@ -14,9 +14,8 @@
 <div id="login-screen" class="screen active">
     <div class="login-wrap">
         <div class="login-brand">
-            <!-- NEW -->
-<img src="image/mcclogo.png" alt="MCC Logo" class="brand-logo-img">
-<h1>MCC<span>Inventory</span></h1>
+            <img src="image/mcclogo.png" alt="MCC Logo" class="brand-logo-img">
+            <h1>MCC<span>Inventory</span></h1>
             <p>Bike Parts &amp; Supplies System</p>
         </div>
         <div class="login-card">
@@ -45,8 +44,7 @@
 
     <header class="app-header">
         <div class="header-left">
-            <!-- NEW -->
-<img src="image/mcclogo.png" alt="MCC Logo" class="header-logo-img">
+            <img src="image/mcclogo.png" alt="MCC Logo" class="header-logo-img">
             <div>
                 <span class="header-title">MCC Inventory</span>
                 <span id="role-badge" class="role-badge"></span>
@@ -86,7 +84,7 @@
                 </div>
             </div>
 
-            <!-- STOCK ENTRY (admin + staff) -->
+            <!-- STOCK ENTRY -->
             <div class="panel" id="stock-entry-panel">
                 <h2 class="panel-title">Stock Entry</h2>
                 <div class="input-row">
@@ -97,7 +95,7 @@
                     </div>
                     <div class="field flex1">
                         <label>Category</label>
-                        <select id="item-category">
+                        <select id="item-category" onchange="handleCategoryChange(this, 'custom-category-wrap')">
                             <option value="">-- Category --</option>
                             <option>Chain</option>
                             <option>Seat / Saddle</option>
@@ -110,7 +108,11 @@
                             <option>Gears / Derailleur</option>
                             <option>Lights</option>
                             <option>Other</option>
+                            <option value="__custom__">+ Add Custom Category</option>
                         </select>
+                        <div id="custom-category-wrap" style="display:none; margin-top:6px">
+                            <input type="text" id="custom-category" placeholder="Type custom category...">
+                        </div>
                     </div>
                     <div class="field flex1">
                         <label>Quantity</label>
@@ -133,7 +135,7 @@
                         <input type="text" id="search" placeholder="Search parts..." oninput="filterItems()">
                     </div>
                 </div>
-                <div class="filter-row">
+                <div class="filter-row" id="filter-row">
                     <button class="filter-btn active" onclick="filterByCategory('', this)">All</button>
                     <button class="filter-btn" onclick="filterByCategory('Chain', this)">Chain</button>
                     <button class="filter-btn" onclick="filterByCategory('Seat / Saddle', this)">Seat</button>
@@ -150,10 +152,11 @@
                                 <th>Category</th>
                                 <th>Qty</th>
                                 <th>Status</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="items-body">
-                            <tr><td colspan="4" class="empty-row">Loading...</td></tr>
+                            <tr><td colspan="5" class="empty-row">Loading...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -195,7 +198,6 @@
                 <p id="create-error" class="form-error"></p>
                 <p id="create-success" class="form-success"></p>
             </div>
-
             <div class="panel">
                 <h2 class="panel-title">All Accounts</h2>
                 <div class="table-wrap">
@@ -217,6 +219,73 @@
         </div>
     </div>
 
+</div>
+
+<!-- ── EDIT MODAL ─────────────────────────────────────── -->
+<div id="edit-modal" class="modal-overlay" onclick="closeEditModal(event)">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>Edit Item</h3>
+            <button class="modal-close" onclick="closeEditModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="edit-id">
+            <div class="field">
+                <label>Item Name</label>
+                <input type="text" id="edit-name" placeholder="Item name">
+            </div>
+            <div class="field">
+                <label>Category</label>
+                <select id="edit-category" onchange="handleCategoryChange(this, 'edit-custom-wrap')">
+                    <option value="">-- Category --</option>
+                    <option>Chain</option>
+                    <option>Seat / Saddle</option>
+                    <option>Wheels</option>
+                    <option>Brakes</option>
+                    <option>Pedals</option>
+                    <option>Handlebars</option>
+                    <option>Frame</option>
+                    <option>Tires</option>
+                    <option>Gears / Derailleur</option>
+                    <option>Lights</option>
+                    <option>Other</option>
+                    <option value="__custom__">+ Add Custom Category</option>
+                </select>
+                <div id="edit-custom-wrap" style="display:none; margin-top:6px">
+                    <input type="text" id="edit-custom-category" placeholder="Type custom category...">
+                </div>
+            </div>
+            <div class="field">
+                <label>Quantity</label>
+                <input type="number" id="edit-qty" placeholder="0" min="0">
+            </div>
+            <p id="edit-error" class="form-error"></p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+            <button class="btn-primary" onclick="saveEdit()">
+                <span class="btn-text">Save Changes</span>
+                <span class="btn-loader" style="display:none">Saving...</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ── DELETE CONFIRM MODAL ───────────────────────────── -->
+<div id="delete-modal" class="modal-overlay" onclick="closeDeleteModal(event)">
+    <div class="modal-card modal-sm">
+        <div class="modal-header">
+            <h3>Delete Item</h3>
+            <button class="modal-close" onclick="closeDeleteModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <p class="delete-msg">Are you sure you want to delete <strong id="delete-item-name"></strong>? This cannot be undone.</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeDeleteModal()">Cancel</button>
+            <button class="btn-delete" onclick="confirmDelete()">Delete Item</button>
+        </div>
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

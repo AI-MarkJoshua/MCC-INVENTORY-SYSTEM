@@ -55,8 +55,8 @@ body {
 .login-brand { text-align: center; }
 
 .brand-logo-img {
-    width: 90px;
-    height: 90px;
+    width: 100px;
+    height: 100px;
     object-fit: contain;
     margin: 0 auto 14px;
     display: block;
@@ -98,7 +98,6 @@ body {
     gap: 18px;
     box-shadow: var(--shadow);
 }
-
 .login-card h2 {
     font-family: var(--display);
     font-size: 22px;
@@ -185,17 +184,8 @@ select option { background: #fff; color: var(--text); }
     transition: all 0.2s;
     min-width: 120px;
 }
-.btn-in  {
-    background: var(--green);
-    color: #fff;
-    border: none;
-    box-shadow: 0 2px 8px rgba(22,163,74,0.2);
-}
-.btn-out {
-    background: #fff;
-    border: 2px solid var(--red);
-    color: var(--red);
-}
+.btn-in  { background: var(--green); color: #fff; border: none; box-shadow: 0 2px 8px rgba(22,163,74,0.2); }
+.btn-out { background: #fff; border: 2px solid var(--red); color: var(--red); }
 .btn-in:hover  { opacity: 0.88; transform: translateY(-1px); }
 .btn-out:hover { background: #fef2f2; transform: translateY(-1px); }
 
@@ -213,8 +203,78 @@ select option { background: #fff; color: var(--text); }
 }
 .btn-signout:hover { border-color: var(--red); color: var(--red); background: #fef2f2; }
 
+.btn-cancel {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: var(--radius);
+    font-family: var(--body);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-cancel:hover { background: var(--border); color: var(--text); }
+
+.btn-delete {
+    background: var(--red);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-family: var(--display);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 10px 22px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.btn-delete:hover { opacity: 0.88; }
+
+/* ── TABLE ACTION BUTTONS ─────────────────────────────── */
+.actions-cell { white-space: nowrap; }
+
+.btn-action {
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-right: 6px;
+}
+.btn-edit {
+    background: #eff6ff;
+    color: var(--blue);
+    border: 1px solid #bfdbfe;
+}
+.btn-edit:hover { background: #dbeafe; }
+
+.btn-del {
+    background: #fef2f2;
+    color: var(--red);
+    border: 1px solid #fecaca;
+}
+.btn-del:hover { background: #fee2e2; }
+
+/* ── CATEGORY TAG ─────────────────────────────────────── */
+.cat-tag {
+    display: inline-block;
+    background: #f1f5f9;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
 /* ── MESSAGES ─────────────────────────────────────────── */
-.form-error   { font-size: 13px; color: var(--red); min-height: 16px; }
+.form-error   { font-size: 13px; color: var(--red);   min-height: 16px; }
 .form-success { font-size: 13px; color: var(--green); min-height: 16px; }
 .action-msg   { font-size: 13px; color: var(--green); min-height: 16px; margin-top: 10px; font-weight: 500; }
 .action-msg.error { color: var(--red); }
@@ -232,15 +292,8 @@ select option { background: #fff; color: var(--text); }
     border-bottom: 1px solid var(--border);
     box-shadow: 0 1px 6px rgba(0,0,0,0.06);
 }
-
 .header-left { display: flex; align-items: center; gap: 12px; }
-
-.header-logo-img {
-    width: 36px;
-    height: 36px;
-    object-fit: contain;
-}
-
+.header-logo-img { width: 36px; height: 36px; object-fit: contain; }
 .header-title {
     font-family: var(--display);
     font-size: 20px;
@@ -262,17 +315,12 @@ select option { background: #fff; color: var(--text); }
     vertical-align: middle;
 }
 .role-badge.admin { background: #fff7ed; color: var(--accent); border: 1px solid #fed7aa; }
-.role-badge.staff { background: #f0fdf4; color: var(--green); border: 1px solid #bbf7d0; }
+.role-badge.staff { background: #f0fdf4; color: var(--green);  border: 1px solid #bbf7d0; }
 
 .header-right { display: flex; align-items: center; gap: 14px; }
 .user-label {
-    font-size: 13px;
-    color: var(--muted);
-    font-weight: 500;
-    max-width: 180px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    font-size: 13px; color: var(--muted); font-weight: 500;
+    max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
 /* ── NAV TABS ─────────────────────────────────────────── */
@@ -282,7 +330,6 @@ select option { background: #fff; color: var(--text); }
     padding: 0 28px;
     background: #fff;
 }
-
 .nav-tab {
     background: transparent;
     border: none;
@@ -307,7 +354,7 @@ select option { background: #fff; color: var(--text); }
 
 /* ── APP MAIN ─────────────────────────────────────────── */
 .app-main {
-    max-width: 960px;
+    max-width: 980px;
     margin: 0 auto;
     padding: 28px 24px;
     display: flex;
@@ -316,11 +363,7 @@ select option { background: #fff; color: var(--text); }
 }
 
 /* ── STATS ────────────────────────────────────────────── */
-.stats-row {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 14px;
-}
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
 
 .stat-card {
     background: var(--surface);
@@ -436,7 +479,7 @@ thead th {
 tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
 tbody tr:last-child { border-bottom: none; }
 tbody tr:hover { background: #fafbfc; }
-tbody td { padding: 13px 14px; color: var(--text); }
+tbody td { padding: 12px 14px; color: var(--text); vertical-align: middle; }
 
 .badge {
     display: inline-block;
@@ -453,11 +496,88 @@ tbody td { padding: 13px 14px; color: var(--text); }
 .badge-admin { background: #fff7ed; color: var(--accent); border: 1px solid #fed7aa; }
 .badge-staff { background: #f0fdf4; color: var(--green);  border: 1px solid #bbf7d0; }
 
-.empty-row {
-    text-align: center;
+.empty-row { text-align: center; color: var(--muted); padding: 40px !important; font-size: 14px; }
+
+/* ── MODALS ───────────────────────────────────────────── */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(4px);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+.modal-overlay.active { display: flex; }
+
+.modal-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    width: 100%;
+    max-width: 480px;
+    animation: modal-in 0.2s ease;
+}
+.modal-card.modal-sm { max-width: 380px; }
+
+@keyframes modal-in {
+    from { opacity: 0; transform: translateY(-12px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px 0;
+}
+.modal-header h3 {
+    font-family: var(--display);
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text);
+}
+.modal-close {
+    background: var(--surface2);
+    border: 1px solid var(--border);
     color: var(--muted);
-    padding: 40px !important;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
     font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+.modal-close:hover { background: #fef2f2; color: var(--red); border-color: #fecaca; }
+
+.modal-body {
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.delete-msg {
+    font-size: 15px;
+    color: var(--muted);
+    line-height: 1.5;
+}
+.delete-msg strong { color: var(--text); }
+
+.modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 0 24px 20px;
 }
 
 /* ── RESPONSIVE ───────────────────────────────────────── */
@@ -469,22 +589,5 @@ tbody td { padding: 13px 14px; color: var(--text); }
     .app-nav { padding: 0 12px; }
     .app-main { padding: 16px; }
     .search-wrap input { width: 160px; }
-}
-
-/* Login page logo */
-.brand-logo-img {
-    width: 100px;
-    height: 100px;
-    object-fit: contain;
-    margin-bottom: 12px;
-    display: block;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-/* Header nav logo */
-.header-logo-img {
-    width: 36px;
-    height: 36px;
-    object-fit: contain;
+    .btn-action { padding: 4px 8px; font-size: 11px; }
 }

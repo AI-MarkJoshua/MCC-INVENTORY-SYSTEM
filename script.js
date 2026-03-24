@@ -3,10 +3,11 @@ const supabaseUrl = "https://kpppfqzktafjuchssiqa.supabase.co";
 const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwcHBmcXprdGFmanVjaHNzaXFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyMTg2MzgsImV4cCI6MjA4OTc5NDYzOH0.E_q4bktMrbigfn8piTj56dcc7mLihiCN_lmB-NBzsDc";
 const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-let currentUser = null;
-let currentRole = null;
-let allItems    = [];
-let activeCategory = '';
+let currentUser     = null;
+let currentRole     = null;
+let allItems        = [];
+let activeCategory  = '';
+let deleteTargetId  = null;
 
 // ── HELPERS ───────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -42,6 +43,23 @@ const fmtDate = iso => iso
     ? new Date(iso).toLocaleDateString('en-PH', { year:'numeric', month:'short', day:'numeric' })
     : '—';
 
+// ── CUSTOM CATEGORY TOGGLE ────────────────────────────────
+function handleCategoryChange(selectEl, wrapId) {
+    const wrap = $(wrapId);
+    if (!wrap) return;
+    wrap.style.display = selectEl.value === '__custom__' ? 'block' : 'none';
+}
+
+// Get the actual category value from a select + custom input pair
+function getCategoryValue(selectId, customId) {
+    const sel = $(selectId);
+    if (!sel) return '';
+    if (sel.value === '__custom__') {
+        return $(customId)?.value.trim() || '';
+    }
+    return sel.value;
+}
+
 // ── VIEW SWITCHING ────────────────────────────────────────
 function switchView(view) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -60,13 +78,10 @@ async function login() {
     if (!email || !pass) return setMsg('login-error', 'Please enter your email and password.');
 
     setLoading('login-btn', true);
-
     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
-
     setLoading('login-btn', false);
 
     if (error) return setMsg('login-error', 'Invalid email or password.');
-
     await initApp(data.user);
 }
 
@@ -86,7 +101,6 @@ async function logout() {
 async function initApp(user) {
     currentUser = user;
 
-    // Fetch role from profiles table
     const { data: profile } = await supabaseClient
         .from('profiles')
         .select('role, full_name')
@@ -96,13 +110,11 @@ async function initApp(user) {
     currentRole = profile?.role || 'staff';
     const displayName = profile?.full_name || user.email;
 
-    // Set header info
     $('user-label').textContent = displayName;
     const badge = $('role-badge');
     badge.textContent = currentRole.toUpperCase();
     badge.className   = `role-badge ${currentRole}`;
 
-    // Show Accounts tab only for admin
     $('tab-accounts').style.display = currentRole === 'admin' ? '' : 'none';
 
     showScreen('app-screen');
@@ -112,15 +124,9 @@ async function initApp(user) {
 
 // ── SESSION CHECK ─────────────────────────────────────────
 (async () => {
-    // Always show login screen first while checking session
     showScreen('login-screen');
-
     const { data } = await supabaseClient.auth.getSession();
-    if (data.session) {
-        await initApp(data.session.user);
-    } else {
-        showScreen('login-screen');
-    }
+    if (data.session) await initApp(data.session.user);
 
     supabaseClient.auth.onAuthStateChange(async (_event, session) => {
         if (session && !currentUser) await initApp(session.user);
@@ -145,10 +151,8 @@ async function createAccount() {
 
     setLoading('create-btn', true);
 
-    // Sign up the new user
     const { data, error } = await supabaseClient.auth.signUp({
-        email,
-        password: pass,
+        email, password: pass,
         options: { data: { full_name: name } }
     });
 
@@ -157,7 +161,6 @@ async function createAccount() {
         return setMsg('create-error', error.message);
     }
 
-    // Insert into profiles table
     if (data.user) {
         const { error: profileError } = await supabaseClient
             .from('profiles')
@@ -171,42 +174,34 @@ async function createAccount() {
 
     setLoading('create-btn', false);
     setMsg('create-success', `✓ Account created for ${name} (${role})`);
-
-    // Clear fields
     ['new-name','new-email','new-password'].forEach(id => $(id).value = '');
     $('new-role').value = 'staff';
-
     loadAccounts();
 }
 
-// ── LOAD ACCOUNTS (admin only) ────────────────────────────
+// ── LOAD ACCOUNTS ─────────────────────────────────────────
 async function loadAccounts() {
     if (currentRole !== 'admin') return;
-
     const tbody = $('accounts-body');
     tbody.innerHTML = `<tr><td colspan="4" class="empty-row">Loading...</td></tr>`;
 
     const { data, error } = await supabaseClient
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .from('profiles').select('*').order('created_at', { ascending: false });
 
     if (error) {
         tbody.innerHTML = `<tr><td colspan="4" class="empty-row" style="color:var(--red)">Error: ${error.message}</td></tr>`;
         return;
     }
-
     if (!data.length) {
         tbody.innerHTML = `<tr><td colspan="4" class="empty-row">No accounts found.</td></tr>`;
         return;
     }
-
     tbody.innerHTML = data.map(p => `
         <tr>
             <td><strong>${escHtml(p.full_name || '—')}</strong></td>
             <td style="color:var(--muted)">${escHtml(p.email || '—')}</td>
-            <td><span class="badge badge-${p.role}">${(p.role || 'staff').toUpperCase()}</span></td>
-            <td style="color:var(--muted); font-size:13px">${fmtDate(p.created_at)}</td>
+            <td><span class="badge badge-${p.role}">${(p.role||'staff').toUpperCase()}</span></td>
+            <td style="color:var(--muted);font-size:13px">${fmtDate(p.created_at)}</td>
         </tr>
     `).join('');
 }
@@ -214,30 +209,34 @@ async function loadAccounts() {
 // ── STOCK IN ──────────────────────────────────────────────
 async function addStock() {
     const name     = $('item-name').value.trim();
-    const category = $('item-category').value;
+    const category = getCategoryValue('item-category', 'custom-category');
     const qty      = parseInt($('item-qty').value);
 
     setMsg('action-msg', '');
-    if (!name)        return setMsg('action-msg', 'Please enter an item name.', true);
+    if (!name)           return setMsg('action-msg', 'Please enter an item name.', true);
     if (!qty || qty <= 0) return setMsg('action-msg', 'Enter a valid quantity.', true);
 
+    // Check for existing item (case-insensitive)
     const { data: existing } = await supabaseClient
         .from('items').select('*').ilike('name', name);
 
     if (existing && existing.length > 0) {
+        // Merge into existing — no duplicate created
         const item   = existing[0];
         const newQty = item.quantity + qty;
         const { error } = await supabaseClient
-            .from('items').update({ quantity: newQty, category: category || item.category })
+            .from('items')
+            .update({ quantity: newQty, category: category || item.category })
             .eq('id', item.id);
         if (error) return setMsg('action-msg', error.message, true);
+        setMsg('action-msg', `✓ "${name}" already exists — quantity updated to ${newQty}`);
     } else {
         const { error } = await supabaseClient
             .from('items').insert([{ name, quantity: qty, category: category || 'Other' }]);
         if (error) return setMsg('action-msg', error.message, true);
+        setMsg('action-msg', `✓ Added ${qty} unit(s) of "${name}"`);
     }
 
-    setMsg('action-msg', `✓ Added ${qty} unit(s) of "${name}"`);
     clearStockInputs();
     loadItems();
 }
@@ -248,7 +247,7 @@ async function removeStock() {
     const qty  = parseInt($('item-qty').value);
 
     setMsg('action-msg', '');
-    if (!name)        return setMsg('action-msg', 'Please enter an item name.', true);
+    if (!name)           return setMsg('action-msg', 'Please enter an item name.', true);
     if (!qty || qty <= 0) return setMsg('action-msg', 'Enter a valid quantity.', true);
 
     const { data, error } = await supabaseClient
@@ -275,20 +274,40 @@ async function removeStock() {
 // ── LOAD ITEMS ────────────────────────────────────────────
 async function loadItems() {
     const tbody = $('items-body');
-    tbody.innerHTML = `<tr><td colspan="4" class="empty-row">Loading...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="empty-row">Loading...</td></tr>`;
 
     const { data, error } = await supabaseClient
         .from('items').select('*').order('name', { ascending: true });
 
     if (error) {
-        tbody.innerHTML = `<tr><td colspan="4" class="empty-row" style="color:var(--red)">Error: ${error.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="empty-row" style="color:var(--red)">Error: ${error.message}</td></tr>`;
         return;
     }
 
     allItems = data || [];
     updateDatalist(allItems);
     updateStats(allItems);
+    updateFilterButtons(allItems);
     applyFilters();
+}
+
+// ── DYNAMIC FILTER BUTTONS ────────────────────────────────
+function updateFilterButtons(items) {
+    // Collect unique categories
+    const cats = [...new Set(items.map(i => i.category).filter(Boolean))].sort();
+    const defaultCats = ['Chain','Seat / Saddle','Wheels','Brakes','Tires','Other'];
+
+    const row = $('filter-row');
+    // Keep All button, rebuild rest
+    row.innerHTML = `<button class="filter-btn ${activeCategory === '' ? 'active' : ''}" onclick="filterByCategory('', this)">All</button>`;
+
+    // Merge default + any custom categories from DB
+    const allCats = [...new Set([...defaultCats, ...cats])];
+    allCats.forEach(cat => {
+        const isActive = activeCategory === cat;
+        const label = cat.length > 12 ? cat.substring(0, 12) + '…' : cat;
+        row.innerHTML += `<button class="filter-btn ${isActive ? 'active' : ''}" title="${escHtml(cat)}" onclick="filterByCategory('${escHtml(cat)}', this)">${escHtml(label)}</button>`;
+    });
 }
 
 function applyFilters() {
@@ -302,7 +321,7 @@ function applyFilters() {
 function renderItems(items) {
     const tbody = $('items-body');
     if (!items.length) {
-        tbody.innerHTML = `<tr><td colspan="4" class="empty-row">No items found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="empty-row">No items found.</td></tr>`;
         return;
     }
     tbody.innerHTML = items.map(item => {
@@ -311,11 +330,18 @@ function renderItems(items) {
             : item.quantity <= 5
             ? `<span class="badge badge-low">Low Stock</span>`
             : `<span class="badge badge-ok">In Stock</span>`;
+
+        const actions = currentRole === 'admin'
+            ? `<button class="btn-action btn-edit" onclick="openEditModal(${item.id})">✏️ Edit</button>
+               <button class="btn-action btn-del"  onclick="openDeleteModal(${item.id}, '${escHtml(item.name)}')">🗑️ Delete</button>`
+            : `<span style="color:var(--muted);font-size:12px">—</span>`;
+
         return `<tr>
             <td><strong>${escHtml(item.name)}</strong></td>
-            <td style="color:var(--muted);font-size:13px">${escHtml(item.category || '—')}</td>
+            <td><span class="cat-tag">${escHtml(item.category || '—')}</span></td>
             <td style="font-size:16px;font-weight:700">${item.quantity}</td>
             <td>${badge}</td>
+            <td class="actions-cell">${actions}</td>
         </tr>`;
     }).join('');
 }
@@ -343,9 +369,119 @@ function filterByCategory(cat, btn) {
     applyFilters();
 }
 
+// ── EDIT MODAL ────────────────────────────────────────────
+function openEditModal(id) {
+    const item = allItems.find(i => i.id === id);
+    if (!item) return;
+
+    $('edit-id').value  = item.id;
+    $('edit-name').value = item.name;
+    $('edit-qty').value  = item.quantity;
+    setMsg('edit-error', '');
+
+    // Set category dropdown
+    const sel = $('edit-category');
+    const existingOpts = Array.from(sel.options).map(o => o.value);
+    if (existingOpts.includes(item.category)) {
+        sel.value = item.category;
+        $('edit-custom-wrap').style.display = 'none';
+    } else if (item.category) {
+        // Custom category — show custom input
+        sel.value = '__custom__';
+        $('edit-custom-wrap').style.display = 'block';
+        $('edit-custom-category').value = item.category;
+    } else {
+        sel.value = '';
+        $('edit-custom-wrap').style.display = 'none';
+    }
+
+    $('edit-modal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeEditModal(e) {
+    if (e && e.target !== $('edit-modal')) return;
+    $('edit-modal').classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+async function saveEdit() {
+    const id       = parseInt($('edit-id').value);
+    const name     = $('edit-name').value.trim();
+    const category = getCategoryValue('edit-category', 'edit-custom-category');
+    const qty      = parseInt($('edit-qty').value);
+
+    setMsg('edit-error', '');
+    if (!name)           return setMsg('edit-error', 'Item name is required.');
+    if (isNaN(qty) || qty < 0) return setMsg('edit-error', 'Quantity must be 0 or more.');
+
+    // Check if another item already has this name (duplicate check)
+    const duplicate = allItems.find(i => i.name.toLowerCase() === name.toLowerCase() && i.id !== id);
+    if (duplicate) return setMsg('edit-error', `"${name}" already exists in inventory. Use Stock In to add quantity instead.`);
+
+    const saveBtn = document.querySelector('#edit-modal .btn-primary');
+    const t = saveBtn.querySelector('.btn-text');
+    const l = saveBtn.querySelector('.btn-loader');
+    t.style.display = 'none'; l.style.display = '';
+    saveBtn.disabled = true;
+
+    const { error } = await supabaseClient
+        .from('items')
+        .update({ name, category: category || 'Other', quantity: qty })
+        .eq('id', id);
+
+    t.style.display = ''; l.style.display = 'none';
+    saveBtn.disabled = false;
+
+    if (error) return setMsg('edit-error', error.message);
+
+    $('edit-modal').classList.remove('active');
+    document.body.style.overflow = '';
+    loadItems();
+}
+
+// ── DELETE MODAL ──────────────────────────────────────────
+function openDeleteModal(id, name) {
+    deleteTargetId = id;
+    $('delete-item-name').textContent = name;
+    $('delete-modal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeDeleteModal(e) {
+    if (e && e.target !== $('delete-modal')) return;
+    $('delete-modal').classList.remove('active');
+    document.body.style.overflow = '';
+    deleteTargetId = null;
+}
+
+async function confirmDelete() {
+    if (!deleteTargetId) return;
+
+    const { error } = await supabaseClient
+        .from('items').delete().eq('id', deleteTargetId);
+
+    if (error) { alert('Error deleting item: ' + error.message); return; }
+
+    $('delete-modal').classList.remove('active');
+    document.body.style.overflow = '';
+    deleteTargetId = null;
+    loadItems();
+}
+
 // ── UTILS ─────────────────────────────────────────────────
 function clearStockInputs() {
-    $('item-name').value = '';
-    $('item-qty').value  = '';
+    $('item-name').value     = '';
+    $('item-qty').value      = '';
     $('item-category').value = '';
+    $('custom-category-wrap').style.display = 'none';
+    if ($('custom-category')) $('custom-category').value = '';
 }
+
+// Close modals on Escape key
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        closeEditModal();
+        closeDeleteModal();
+    }
+});
