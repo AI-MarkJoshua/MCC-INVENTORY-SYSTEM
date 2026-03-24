@@ -67,6 +67,8 @@ function switchView(view) {
     $(`view-${view}`).classList.add('active');
     $(`tab-${view}`).classList.add('active');
     if (view === 'accounts') loadAccounts();
+    if (view === 'dashboard') loadDashboard();
+    if (view === 'inventory') loadItems();
 }
 
 // ── LOGIN ─────────────────────────────────────────────────
@@ -118,8 +120,9 @@ async function initApp(user) {
     $('tab-accounts').style.display = currentRole === 'admin' ? '' : 'none';
 
     showScreen('app-screen');
-    switchView('inventory');
+    switchView('dashboard');
     loadItems();
+    clearStockInputs();
 }
 
 // ── SESSION CHECK ─────────────────────────────────────────
@@ -256,11 +259,19 @@ async function removeStock() {
     if (error) return setMsg('action-msg', error.message, true);
     if (!data || data.length === 0) return setMsg('action-msg', `"${name}" not found in inventory.`, true);
 
-    const item   = data[0];
+    const item = data[0];
+    const selectedCategory = getCategoryValue('item-category', 'custom-category');
+    
+    // Validate category matches existing item category
+    if (selectedCategory && selectedCategory !== item.category) {
+        return setMsg('action-msg', `Category mismatch! "${name}" is in category "${item.category}" but you selected "${selectedCategory}". Please select the correct category.`, true);
+    }
+
     const newQty = item.quantity - qty;
 
     if (newQty < 0) return setMsg('action-msg', `Not enough stock! Available: ${item.quantity} unit(s).`, true);
 
+    // Update quantity only - do not update category to prevent category replacement
     const { error: upErr } = await supabaseClient
         .from('items').update({ quantity: newQty }).eq('id', item.id);
 
@@ -289,6 +300,7 @@ async function loadItems() {
     updateStats(allItems);
     updateFilterButtons(allItems);
     applyFilters();
+    setupItemNameAutoComplete();
 }
 
 // ── DYNAMIC FILTER BUTTONS ────────────────────────────────
@@ -478,6 +490,40 @@ function clearStockInputs() {
     if ($('custom-category')) $('custom-category').value = '';
 }
 
+// ── AUTO-POPULATE CATEGORY ON ITEM SELECTION ─────────────────────────────────────────────────
+function setupItemNameAutoComplete() {
+    const itemNameInput = $('item-name');
+    if (!itemNameInput) return;
+
+    itemNameInput.addEventListener('input', function() {
+        const enteredName = this.value.trim();
+        if (!enteredName) return;
+
+        // Find matching item in inventory
+        const matchingItem = allItems.find(item => 
+            item.name.toLowerCase() === enteredName.toLowerCase()
+        );
+
+        if (matchingItem && matchingItem.category) {
+            // Auto-populate category
+            const categorySelect = $('item-category');
+            const existingOpts = Array.from(categorySelect.options).map(o => o.value);
+            
+            if (existingOpts.includes(matchingItem.category)) {
+                categorySelect.value = matchingItem.category;
+                $('custom-category-wrap').style.display = 'none';
+            } else {
+                // Set to custom category if it's not in the dropdown
+                categorySelect.value = '__custom__';
+                $('custom-category-wrap').style.display = 'block';
+                if ($('custom-category')) {
+                    $('custom-category').value = matchingItem.category;
+                }
+            }
+        }
+    });
+}
+
 // Close modals on Escape key
 document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
@@ -485,3 +531,137 @@ document.addEventListener('keydown', e => {
         closeDeleteModal();
     }
 });
+
+// ── DASHBOARD FUNCTIONS ───────────────────────────────────────
+let categoryChart = null;
+
+async function loadDashboard() {
+    if (!allItems.length) {
+        await loadItems();
+    }
+    
+    updateDashboardStats();
+    updateCategoryChart();
+}
+
+function updateDashboardStats() {
+    updateStats(allItems);
+}
+
+function updateCategoryChart() {
+    const canvas = $('categoryChart');
+    if (!canvas) return;
+
+    // Sort items by quantity for better visualization
+    const sortedItems = [...allItems].sort((a, b) => b.quantity - a.quantity);
+    
+    // Take top 15 items to avoid overcrowding
+    const topItems = sortedItems.slice(0, 15);
+    
+    const labels = topItems.map(item => item.name);
+    const data = topItems.map(item => item.quantity);
+
+    // Destroy existing chart if it exists
+    if (categoryChart) {
+        categoryChart.destroy();
+    }
+
+    // Create new bar chart
+    const ctx = canvas.getContext('2d');
+    categoryChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Stock Level',
+                data: data,
+                backgroundColor: data.map(qty => {
+                    // Color based on stock level
+                    if (qty === 0) return '#dc2626';      // Red for out of stock
+                    if (qty <= 5) return '#d97706';     // Yellow for low stock
+                    return '#16a34a';                   // Green for in stock
+                }),
+                borderColor: data.map(qty => {
+                    if (qty === 0) return '#991b1b';
+                    if (qty <= 5) return '#92400e';
+                    return '#14532d';
+                }),
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    borderColor: '#fff',
+                    borderWidth: 1,
+                    padding: 12,
+                    displayColors: false,
+                    callbacks: {
+                        title: function(context) {
+                            return context[0].label;
+                        },
+                        label: function(context) {
+                            const quantity = context.parsed.y;
+                            const status = quantity === 0 ? 'Out of Stock' : 
+                                          quantity <= 5 ? 'Low Stock' : 'In Stock';
+                            return [
+                                `Quantity: ${quantity} units`,
+                                `Status: ${status}`
+                            ];
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Quantity',
+                        color: '#6b7280',
+                        font: {
+                            size: 12,
+                            weight: '600'
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(107, 114, 128, 0.1)',
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: '#6b7280',
+                        font: {
+                            size: 11
+                        }
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false,
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: '#374151',
+                        font: {
+                            size: 11,
+                            weight: '500'
+                        },
+                        // Auto-hide some labels if too many items
+                        autoSkip: true,
+                        maxRotation: 45,
+                        minRotation: 45
+                    }
+                }
+            }
+        }
+    });
+}

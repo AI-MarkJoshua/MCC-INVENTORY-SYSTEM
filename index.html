@@ -57,15 +57,16 @@
     </header>
 
     <nav class="app-nav">
-        <button class="nav-tab active" onclick="switchView('inventory')" id="tab-inventory">📦 Inventory</button>
+        <button class="nav-tab active" onclick="switchView('dashboard')" id="tab-dashboard">📊 Dashboard</button>
+        <button class="nav-tab" onclick="switchView('inventory')" id="tab-inventory">📦 Inventory</button>
         <button class="nav-tab" onclick="switchView('accounts')" id="tab-accounts" style="display:none">👥 Accounts</button>
     </nav>
 
-    <!-- INVENTORY VIEW -->
-    <div id="view-inventory" class="view active">
+    <!-- DASHBOARD VIEW -->
+    <div id="view-dashboard" class="view active">
         <div class="app-main">
-
-            <div class="stats-row">
+            <!-- Dashboard Statistics -->
+            <div class="dashboard-stats">
                 <div class="stat-card">
                     <div class="stat-num" id="stat-total">—</div>
                     <div class="stat-label">Total Items</div>
@@ -83,6 +84,25 @@
                     <div class="stat-label">Out of Stock</div>
                 </div>
             </div>
+
+            <!-- Dashboard Content -->
+            <div class="dashboard-content">
+                <!-- Full Width Chart -->
+                <div class="dashboard-chart-full">
+                    <div class="panel">
+                        <h2 class="panel-title">Stock Levels by Item</h2>
+                        <div class="chart-container">
+                            <canvas id="categoryChart" width="400" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- INVENTORY VIEW -->
+    <div id="view-inventory" class="view">
+        <div class="app-main">
 
             <!-- STOCK ENTRY -->
             <div class="panel" id="stock-entry-panel">
@@ -289,6 +309,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
