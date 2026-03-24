@@ -9,6 +9,11 @@ let allItems        = [];
 let activeCategory  = '';
 let deleteTargetId  = null;
 
+// ── PAGINATION VARIABLES ─────────────────────────────────
+let currentPage = 1;
+let itemsPerPage = 10;
+let filteredItems = [];
+
 // ── HELPERS ───────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 
@@ -305,20 +310,90 @@ async function loadItems() {
 
 // ── DYNAMIC FILTER BUTTONS ────────────────────────────────
 function updateFilterButtons(items) {
-    // Collect unique categories
-    const cats = [...new Set(items.map(i => i.category).filter(Boolean))].sort();
-    const defaultCats = ['Chain','Seat / Saddle','Wheels','Brakes','Tires','Other'];
+    // Count items per category
+    const categoryCounts = {};
+    items.forEach(item => {
+        if (item.category) {
+            categoryCounts[item.category] = (categoryCounts[item.category] || 0) + 1;
+        }
+    });
+
+    // Get categories with 2 or more items
+    const categoriesWithItems = Object.entries(categoryCounts)
+        .filter(([category, count]) => count >= 2)
+        .map(([category, count]) => category)
+        .sort();
 
     const row = $('filter-row');
     // Keep All button, rebuild rest
     row.innerHTML = `<button class="filter-btn ${activeCategory === '' ? 'active' : ''}" onclick="filterByCategory('', this)">All</button>`;
 
-    // Merge default + any custom categories from DB
-    const allCats = [...new Set([...defaultCats, ...cats])];
-    allCats.forEach(cat => {
+    // Add category buttons for categories with 2+ items
+    categoriesWithItems.forEach(cat => {
         const isActive = activeCategory === cat;
         const label = cat.length > 12 ? cat.substring(0, 12) + '…' : cat;
-        row.innerHTML += `<button class="filter-btn ${isActive ? 'active' : ''}" title="${escHtml(cat)}" onclick="filterByCategory('${escHtml(cat)}', this)">${escHtml(label)}</button>`;
+        const itemCount = categoryCounts[cat];
+        row.innerHTML += `<button class="filter-btn ${isActive ? 'active' : ''}" title="${escHtml(cat)} (${itemCount} items)" onclick="filterByCategory('${escHtml(cat)}', this)">${escHtml(label)}</button>`;
+    });
+
+    // Setup drag scrolling after updating buttons
+    setupDragScrolling();
+}
+
+// ── DRAG SCROLLING FOR FILTER ROW ─────────────────────────────
+function setupDragScrolling() {
+    const filterRow = $('filter-row');
+    if (!filterRow) return;
+
+    let isDown = false;
+    let startX;
+    let scrollLeft;
+
+    filterRow.addEventListener('mousedown', (e) => {
+        // Only start dragging if clicking on empty space or holding mouse button
+        if (e.target.classList.contains('filter-btn')) return;
+        
+        isDown = true;
+        filterRow.classList.add('dragging');
+        startX = e.pageX - filterRow.offsetLeft;
+        scrollLeft = filterRow.scrollLeft;
+        e.preventDefault();
+    });
+
+    filterRow.addEventListener('mouseleave', () => {
+        isDown = false;
+        filterRow.classList.remove('dragging');
+    });
+
+    filterRow.addEventListener('mouseup', () => {
+        isDown = false;
+        filterRow.classList.remove('dragging');
+    });
+
+    filterRow.addEventListener('mousemove', (e) => {
+        if (!isDown) return;
+        e.preventDefault();
+        const x = e.pageX - filterRow.offsetLeft;
+        const walk = (x - startX) * 2; // Scroll speed
+        filterRow.scrollLeft = scrollLeft - walk;
+    });
+
+    // Touch support for mobile
+    let touchStartX = 0;
+    let touchScrollLeft = 0;
+
+    filterRow.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].pageX - filterRow.offsetLeft;
+        touchScrollLeft = filterRow.scrollLeft;
+    });
+
+    filterRow.addEventListener('touchmove', (e) => {
+        if (e.target.classList.contains('filter-btn')) return;
+        
+        const x = e.touches[0].pageX - filterRow.offsetLeft;
+        const walk = (x - touchStartX) * 2;
+        filterRow.scrollLeft = touchScrollLeft - walk;
+        e.preventDefault();
     });
 }
 
@@ -327,16 +402,26 @@ function applyFilters() {
     let filtered = allItems;
     if (activeCategory) filtered = filtered.filter(i => i.category === activeCategory);
     if (q) filtered = filtered.filter(i => i.name.toLowerCase().includes(q));
-    renderItems(filtered);
+    
+    filteredItems = filtered;
+    currentPage = 1; // Reset to first page when filters change
+    renderItems();
 }
 
-function renderItems(items) {
+function renderItems() {
     const tbody = $('items-body');
-    if (!items.length) {
+    if (!filteredItems.length) {
         tbody.innerHTML = `<tr><td colspan="5" class="empty-row">No items found.</td></tr>`;
+        updatePagination();
         return;
     }
-    tbody.innerHTML = items.map(item => {
+    
+    // Calculate pagination
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pageItems = filteredItems.slice(startIndex, endIndex);
+    
+    tbody.innerHTML = pageItems.map(item => {
         const badge = item.quantity === 0
             ? `<span class="badge badge-out">Out of Stock</span>`
             : item.quantity <= 5
@@ -356,6 +441,8 @@ function renderItems(items) {
             <td class="actions-cell">${actions}</td>
         </tr>`;
     }).join('');
+    
+    updatePagination();
 }
 
 function updateStats(items) {
@@ -783,18 +870,146 @@ function updateCategoryChart() {
                         drawBorder: false
                     },
                     ticks: {
-                        color: '#374151',
-                        font: {
-                            size: 11,
-                            weight: '500'
                         },
-                        // Auto-hide some labels if too many items
-                        autoSkip: true,
-                        maxRotation: 45,
-                        minRotation: 45
+                        grid: {
+                            color: 'rgba(107, 114, 128, 0.1)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: '#6b7280',
+                            font: {
+                                size: 11
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false,
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: '#374151',
+                            font: {
+                                size: 11,
+                                weight: '500'
+                            },
+                            // Auto-hide some labels if too many items
+                            autoSkip: true,
+                            maxRotation: 45,
                     }
                 }
             }
         }
     });
+}
+
+// ── PAGINATION FUNCTIONS ────────────────────────────────────
+function updatePagination() {
+    const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+    const paginationControls = $('pagination-controls');
+    const paginationInfo = $('pagination-info-text');
+    
+    if (!paginationControls || !paginationInfo) return;
+    
+    // Update info text
+    const startItem = filteredItems.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+    const endItem = Math.min(currentPage * itemsPerPage, filteredItems.length);
+    paginationInfo.textContent = `Showing ${startItem}-${endItem} of ${filteredItems.length} items`;
+    
+    // Clear existing pagination controls
+    paginationControls.innerHTML = '';
+    
+    if (totalPages <= 1) {
+        // Don't show pagination if only one page or no items
+        return;
+    }
+    
+    // Previous button
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'pagination-btn';
+    prevBtn.textContent = '‹';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.onclick = () => goToPage(currentPage - 1);
+    paginationControls.appendChild(prevBtn);
+    
+    // Page numbers
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    
+    // Adjust start page if we're near the end
+    if (endPage - startPage + 1 < maxVisiblePages) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+    
+    // First page and ellipsis
+    if (startPage > 1) {
+        const firstBtn = createPageButton(1);
+        paginationControls.appendChild(firstBtn);
+        
+        if (startPage > 2) {
+            const ellipsis = document.createElement('span');
+            ellipsis.className = 'pagination-ellipsis';
+            ellipsis.textContent = '...';
+            paginationControls.appendChild(ellipsis);
+        }
+    }
+    
+    // Page range
+    for (let i = startPage; i <= endPage; i++) {
+        const pageBtn = createPageButton(i);
+        paginationControls.appendChild(pageBtn);
+    }
+    
+    // Last page and ellipsis
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            const ellipsis = document.createElement('span');
+            ellipsis.className = 'pagination-ellipsis';
+            ellipsis.textContent = '...';
+            paginationControls.appendChild(ellipsis);
+        }
+        
+        const lastBtn = createPageButton(totalPages);
+        paginationControls.appendChild(lastBtn);
+    }
+    
+    // Next button
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'pagination-btn';
+    nextBtn.textContent = '›';
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.onclick = () => goToPage(currentPage + 1);
+    paginationControls.appendChild(nextBtn);
+}
+
+function createPageButton(pageNum) {
+    const btn = document.createElement('button');
+    btn.className = 'pagination-btn';
+    btn.textContent = pageNum;
+    
+    if (pageNum === currentPage) {
+        btn.classList.add('active');
+    }
+    
+    btn.onclick = () => goToPage(pageNum);
+    return btn;
+}
+
+function goToPage(page) {
+    const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+    
+    // Validate page number
+    if (page < 1 || page > totalPages) {
+        return;
+    }
+    
+    currentPage = page;
+    renderItems();
+    
+    // Scroll to top of table
+    const tableContainer = document.querySelector('.table-wrap');
+    if (tableContainer) {
+        tableContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 }
