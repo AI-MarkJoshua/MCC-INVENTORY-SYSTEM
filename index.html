@@ -35,6 +35,32 @@
                 <span class="btn-loader" style="display:none">Signing in...</span>
             </button>
             <p id="login-error" class="form-error"></p>
+            <button class="btn-forgot" onclick="showForgotPassword()">Forgot password?</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── FORGOT PASSWORD SCREEN ── -->
+<div id="forgot-screen" class="screen">
+    <div class="login-wrap">
+        <div class="login-brand">
+            <img src="image/mcclogo.png" alt="MCC Logo" class="brand-logo-img">
+            <h1>MCC<span>Inventory</span></h1>
+        </div>
+        <div class="login-card">
+            <button class="btn-back" onclick="showLogin()">← Back to Sign In</button>
+            <h2>Reset Password</h2>
+            <p class="login-sub">Enter your email and we'll send a reset link.</p>
+            <div class="field">
+                <label>Email Address</label>
+                <input type="email" id="forgot-email" placeholder="you@example.com">
+            </div>
+            <button class="btn-primary full" id="forgot-btn" onclick="sendResetEmail()">
+                <span class="btn-text">Send Reset Link</span>
+                <span class="btn-loader" style="display:none">Sending...</span>
+            </button>
+            <p id="forgot-error"   class="form-error"></p>
+            <p id="forgot-success" class="form-success"></p>
         </div>
     </div>
 </div>
@@ -67,22 +93,10 @@
     <div id="view-dashboard" class="view active">
         <div class="app-main">
             <div class="dashboard-stats">
-                <div class="stat-card">
-                    <div class="stat-num" id="stat-total">—</div>
-                    <div class="stat-label">Total Items</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-num" id="stat-qty">—</div>
-                    <div class="stat-label">Total Units</div>
-                </div>
-                <div class="stat-card warn">
-                    <div class="stat-num" id="stat-low">—</div>
-                    <div class="stat-label">Low Stock</div>
-                </div>
-                <div class="stat-card danger">
-                    <div class="stat-num" id="stat-out">—</div>
-                    <div class="stat-label">Out of Stock</div>
-                </div>
+                <div class="stat-card"><div class="stat-num" id="stat-total">—</div><div class="stat-label">Total Items</div></div>
+                <div class="stat-card"><div class="stat-num" id="stat-qty">—</div><div class="stat-label">Total Units</div></div>
+                <div class="stat-card warn"><div class="stat-num" id="stat-low">—</div><div class="stat-label">Low Stock</div></div>
+                <div class="stat-card danger"><div class="stat-num" id="stat-out">—</div><div class="stat-label">Out of Stock</div></div>
             </div>
             <div class="dashboard-content">
                 <div class="dashboard-chart-full">
@@ -115,17 +129,10 @@
                         <label>Category</label>
                         <select id="item-category" onchange="handleCategoryChange(this, 'custom-category-wrap')">
                             <option value="">-- Category --</option>
-                            <option>Chain</option>
-                            <option>Seat / Saddle</option>
-                            <option>Wheels</option>
-                            <option>Brakes</option>
-                            <option>Pedals</option>
-                            <option>Handlebars</option>
-                            <option>Frame</option>
-                            <option>Tires</option>
-                            <option>Gears / Derailleur</option>
-                            <option>Lights</option>
-                            <option>Other</option>
+                            <option>Chain</option><option>Seat / Saddle</option><option>Wheels</option>
+                            <option>Brakes</option><option>Pedals</option><option>Handlebars</option>
+                            <option>Frame</option><option>Tires</option><option>Gears / Derailleur</option>
+                            <option>Lights</option><option>Other</option>
                             <option value="__custom__">+ Add Custom Category</option>
                         </select>
                         <div id="custom-category-wrap" style="display:none; margin-top:6px">
@@ -157,23 +164,11 @@
                 </div>
                 <div class="table-wrap">
                     <table>
-                        <thead>
-                            <tr>
-                                <th>Item Name</th>
-                                <th>Category</th>
-                                <th>Qty</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="items-body">
-                            <tr><td colspan="5" class="empty-row">Loading...</td></tr>
-                        </tbody>
+                        <thead><tr><th>Item Name</th><th>Category</th><th>Qty</th><th>Status</th><th>Actions</th></tr></thead>
+                        <tbody id="items-body"><tr><td colspan="5" class="empty-row">Loading...</td></tr></tbody>
                     </table>
                     <div class="pagination-container">
-                        <div class="pagination-info">
-                            <span id="pagination-info-text">Showing 0 items</span>
-                        </div>
+                        <div class="pagination-info"><span id="pagination-info-text">Showing 0 items</span></div>
                         <div class="pagination-controls" id="pagination-controls"></div>
                     </div>
                 </div>
@@ -184,8 +179,6 @@
     <!-- ── REPORTS VIEW ── -->
     <div id="view-reports" class="view">
         <div class="app-main">
-
-            <!-- Filter Panel -->
             <div class="panel">
                 <h2 class="panel-title">Generate Report</h2>
                 <div class="report-filters">
@@ -199,14 +192,14 @@
                     </div>
                     <div class="field flex1">
                         <label>Start Date</label>
-                        <input type="date" id="report-start">
+                        <input type="date" id="report-start" placeholder="Select start date">
                     </div>
                     <div class="field flex1">
                         <label>End Date</label>
-                        <input type="date" id="report-end">
+                        <input type="date" id="report-end" placeholder="Select end date">
                     </div>
                     <div class="report-filter-btn">
-                        <button class="btn-primary" onclick="generateReport()">
+                        <button class="btn-primary" id="report-generate-btn" onclick="generateReport()">
                             <span class="btn-text">🔍 Generate</span>
                             <span class="btn-loader" style="display:none">Loading...</span>
                         </button>
@@ -215,7 +208,6 @@
                 <p id="report-error" class="form-error"></p>
             </div>
 
-            <!-- Report Results -->
             <div class="panel" id="report-results" style="display:none">
                 <div class="report-header-row">
                     <div>
@@ -224,15 +216,12 @@
                     </div>
                     <button class="btn-print" onclick="printReport()">🖨️ Print Report</button>
                 </div>
-
-                <!-- Summary badges -->
                 <div class="report-summary" id="report-summary"></div>
-
                 <div class="table-wrap">
                     <table id="report-table">
                         <thead>
                             <tr>
-                                <th>Date & Time</th>
+                                <th>Date &amp; Time</th>
                                 <th>Name (Role)</th>
                                 <th>Item</th>
                                 <th>Category</th>
@@ -247,61 +236,70 @@
                 </div>
                 <p id="report-count" class="report-count"></p>
             </div>
-
         </div>
     </div>
 
     <!-- ── ACCOUNTS VIEW ── -->
     <div id="view-accounts" class="view">
         <div class="app-main">
-            <div class="panel">
-                <h2 class="panel-title">Create New Account</h2>
-                <div class="input-row">
-                    <div class="field flex2">
+
+            <!-- Create Account Card -->
+            <div class="account-form-card">
+                <div class="account-form-header">
+                    <div class="account-form-icon">👤</div>
+                    <div>
+                        <h2 class="account-form-title">Create New Account</h2>
+                        <p class="account-form-sub">Add a staff or admin account to the system</p>
+                    </div>
+                </div>
+                <div class="account-form-grid">
+                    <div class="field">
                         <label>Full Name</label>
                         <input type="text" id="new-name" placeholder="e.g. Maria Santos">
                     </div>
-                    <div class="field flex2">
-                        <label>Email</label>
+                    <div class="field">
+                        <label>Email Address</label>
                         <input type="email" id="new-email" placeholder="staff@mcc.com">
                     </div>
-                    <div class="field flex1">
+                    <div class="field">
                         <label>Role</label>
                         <select id="new-role">
-                            <option value="staff">Staff</option>
-                            <option value="admin">Admin</option>
+                            <option value="staff">👷 Staff</option>
+                            <option value="admin">👑 Admin</option>
                         </select>
                     </div>
-                    <div class="field flex2">
+                    <div class="field">
                         <label>Password</label>
                         <input type="password" id="new-password" placeholder="Min. 6 characters">
                     </div>
                 </div>
-                <button class="btn-primary" id="create-btn" onclick="createAccount()">
-                    <span class="btn-text">+ Create Account</span>
-                    <span class="btn-loader" style="display:none">Creating...</span>
-                </button>
-                <p id="create-error" class="form-error"></p>
-                <p id="create-success" class="form-success"></p>
-            </div>
-            <div class="panel">
-                <h2 class="panel-title">All Accounts</h2>
-                <div class="table-wrap">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Role</th>
-                                <th>Date Created</th>
-                            </tr>
-                        </thead>
-                        <tbody id="accounts-body">
-                            <tr><td colspan="4" class="empty-row">Loading...</td></tr>
-                        </tbody>
-                    </table>
+                <div class="account-form-footer">
+                    <button class="btn-primary" id="create-btn" onclick="createAccount()">
+                        <span class="btn-text">+ Create Account</span>
+                        <span class="btn-loader" style="display:none">Creating...</span>
+                    </button>
+                    <div class="account-form-msgs">
+                        <p id="create-error"   class="form-error"></p>
+                        <p id="create-success" class="form-success"></p>
+                    </div>
                 </div>
             </div>
+
+            <!-- All Accounts -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">All Accounts</h2>
+                    <div class="accounts-filter-row">
+                        <button class="filter-btn active" onclick="filterAccounts('all', this)">All</button>
+                        <button class="filter-btn" onclick="filterAccounts('active', this)">Active</button>
+                        <button class="filter-btn" onclick="filterAccounts('inactive', this)">Inactive</button>
+                    </div>
+                </div>
+                <div id="accounts-list" class="accounts-list">
+                    <div class="empty-row">Loading...</div>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -316,35 +314,22 @@
         </div>
         <div class="modal-body">
             <input type="hidden" id="edit-id">
-            <div class="field">
-                <label>Item Name</label>
-                <input type="text" id="edit-name" placeholder="Item name">
-            </div>
+            <div class="field"><label>Item Name</label><input type="text" id="edit-name" placeholder="Item name"></div>
             <div class="field">
                 <label>Category</label>
                 <select id="edit-category" onchange="handleCategoryChange(this, 'edit-custom-wrap')">
                     <option value="">-- Category --</option>
-                    <option>Chain</option>
-                    <option>Seat / Saddle</option>
-                    <option>Wheels</option>
-                    <option>Brakes</option>
-                    <option>Pedals</option>
-                    <option>Handlebars</option>
-                    <option>Frame</option>
-                    <option>Tires</option>
-                    <option>Gears / Derailleur</option>
-                    <option>Lights</option>
-                    <option>Other</option>
+                    <option>Chain</option><option>Seat / Saddle</option><option>Wheels</option>
+                    <option>Brakes</option><option>Pedals</option><option>Handlebars</option>
+                    <option>Frame</option><option>Tires</option><option>Gears / Derailleur</option>
+                    <option>Lights</option><option>Other</option>
                     <option value="__custom__">+ Add Custom Category</option>
                 </select>
                 <div id="edit-custom-wrap" style="display:none; margin-top:6px">
                     <input type="text" id="edit-custom-category" placeholder="Type custom category...">
                 </div>
             </div>
-            <div class="field">
-                <label>Quantity</label>
-                <input type="number" id="edit-qty" placeholder="0" min="0">
-            </div>
+            <div class="field"><label>Quantity</label><input type="number" id="edit-qty" placeholder="0" min="0"></div>
             <p id="edit-error" class="form-error"></p>
         </div>
         <div class="modal-footer">
@@ -374,7 +359,62 @@
     </div>
 </div>
 
-<!-- ── PRINT TEMPLATE (hidden, used for printing) ── -->
+<!-- ── EDIT ACCOUNT MODAL ── -->
+<div id="edit-account-modal" class="modal-overlay" onclick="closeEditAccountModal(event)">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>Edit Account</h3>
+            <button class="modal-close" onclick="closeEditAccountModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="edit-account-id">
+            <div class="field"><label>Full Name</label><input type="text" id="edit-account-name" placeholder="Full name"></div>
+            <div class="field"><label>Email Address</label><input type="email" id="edit-account-email" placeholder="email@example.com" readonly style="opacity:0.6;cursor:not-allowed"></div>
+            <div class="field">
+                <label>Role</label>
+                <select id="edit-account-role">
+                    <option value="staff">👷 Staff</option>
+                    <option value="admin">👑 Admin</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>New Password <span style="color:var(--muted);font-weight:400">(leave blank to keep current)</span></label>
+                <input type="password" id="edit-account-password" placeholder="Enter new password...">
+            </div>
+            <p id="edit-account-error" class="form-error"></p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeEditAccountModal()">Cancel</button>
+            <button class="btn-primary" id="edit-account-btn" onclick="saveAccountEdit()">
+                <span class="btn-text">Save Changes</span>
+                <span class="btn-loader" style="display:none">Saving...</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ── RESET PASSWORD MODAL (admin initiated) ── -->
+<div id="reset-modal" class="modal-overlay" onclick="closeResetModal(event)">
+    <div class="modal-card modal-sm">
+        <div class="modal-header">
+            <h3>Send Reset Link</h3>
+            <button class="modal-close" onclick="closeResetModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <p class="delete-msg">Send a password reset email to <strong id="reset-user-email"></strong>?</p>
+            <p id="reset-error"   class="form-error"></p>
+            <p id="reset-success" class="form-success"></p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeResetModal()">Cancel</button>
+            <button class="btn-primary" id="reset-confirm-btn" onclick="confirmResetPassword()">
+                <span class="btn-text">Send Reset Email</span>
+                <span class="btn-loader" style="display:none">Sending...</span>
+            </button>
+        </div>
+    </div>
+</div>
+
 <div id="print-area" style="display:none"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
