@@ -59,13 +59,13 @@
     <nav class="app-nav">
         <button class="nav-tab active" onclick="switchView('dashboard')" id="tab-dashboard">📊 Dashboard</button>
         <button class="nav-tab" onclick="switchView('inventory')" id="tab-inventory">📦 Inventory</button>
+        <button class="nav-tab" onclick="switchView('reports')" id="tab-reports">📋 Reports</button>
         <button class="nav-tab" onclick="switchView('accounts')" id="tab-accounts" style="display:none">👥 Accounts</button>
     </nav>
 
-    <!-- DASHBOARD VIEW -->
+    <!-- ── DASHBOARD VIEW ── -->
     <div id="view-dashboard" class="view active">
         <div class="app-main">
-            <!-- Dashboard Statistics -->
             <div class="dashboard-stats">
                 <div class="stat-card">
                     <div class="stat-num" id="stat-total">—</div>
@@ -84,10 +84,7 @@
                     <div class="stat-label">Out of Stock</div>
                 </div>
             </div>
-
-            <!-- Dashboard Content -->
             <div class="dashboard-content">
-                <!-- Full Width Chart -->
                 <div class="dashboard-chart-full">
                     <div class="panel">
                         <h2 class="panel-title">Stock Levels by Item</h2>
@@ -100,11 +97,9 @@
         </div>
     </div>
 
-    <!-- INVENTORY VIEW -->
+    <!-- ── INVENTORY VIEW ── -->
     <div id="view-inventory" class="view">
         <div class="app-main">
-
-            <!-- STOCK ENTRY -->
             <div class="panel" id="stock-entry-panel">
                 <h2 class="panel-title">Stock Entry</h2>
                 <div class="input-row">
@@ -149,7 +144,6 @@
                 <p id="action-msg" class="action-msg"></p>
             </div>
 
-            <!-- INVENTORY TABLE -->
             <div class="panel">
                 <div class="panel-header">
                     <h2 class="panel-title">Parts Inventory</h2>
@@ -160,12 +154,6 @@
                 </div>
                 <div class="filter-row" id="filter-row">
                     <button class="filter-btn active" onclick="filterByCategory('', this)">All</button>
-                    <button class="filter-btn" onclick="filterByCategory('Chain', this)">Chain</button>
-                    <button class="filter-btn" onclick="filterByCategory('Seat / Saddle', this)">Seat</button>
-                    <button class="filter-btn" onclick="filterByCategory('Wheels', this)">Wheels</button>
-                    <button class="filter-btn" onclick="filterByCategory('Brakes', this)">Brakes</button>
-                    <button class="filter-btn" onclick="filterByCategory('Tires', this)">Tires</button>
-                    <button class="filter-btn" onclick="filterByCategory('Other', this)">Other</button>
                 </div>
                 <div class="table-wrap">
                     <table>
@@ -182,23 +170,88 @@
                             <tr><td colspan="5" class="empty-row">Loading...</td></tr>
                         </tbody>
                     </table>
-                    
-                    <!-- Pagination Controls -->
                     <div class="pagination-container">
                         <div class="pagination-info">
-                            <span id="pagination-info-text">Showing 1-10 of 0 items</span>
+                            <span id="pagination-info-text">Showing 0 items</span>
                         </div>
-                        <div class="pagination-controls" id="pagination-controls">
-                            <!-- Pagination buttons will be generated here -->
-                        </div>
+                        <div class="pagination-controls" id="pagination-controls"></div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── REPORTS VIEW ── -->
+    <div id="view-reports" class="view">
+        <div class="app-main">
+
+            <!-- Filter Panel -->
+            <div class="panel">
+                <h2 class="panel-title">Generate Report</h2>
+                <div class="report-filters">
+                    <div class="field flex1">
+                        <label>Transaction Type</label>
+                        <select id="report-type">
+                            <option value="both">Both (Stock In &amp; Out)</option>
+                            <option value="stock_in">Stock In Only</option>
+                            <option value="stock_out">Stock Out Only</option>
+                        </select>
+                    </div>
+                    <div class="field flex1">
+                        <label>Start Date</label>
+                        <input type="date" id="report-start">
+                    </div>
+                    <div class="field flex1">
+                        <label>End Date</label>
+                        <input type="date" id="report-end">
+                    </div>
+                    <div class="report-filter-btn">
+                        <button class="btn-primary" onclick="generateReport()">
+                            <span class="btn-text">🔍 Generate</span>
+                            <span class="btn-loader" style="display:none">Loading...</span>
+                        </button>
+                    </div>
+                </div>
+                <p id="report-error" class="form-error"></p>
+            </div>
+
+            <!-- Report Results -->
+            <div class="panel" id="report-results" style="display:none">
+                <div class="report-header-row">
+                    <div>
+                        <h2 class="panel-title" style="margin-bottom:4px">Transaction Report</h2>
+                        <p id="report-subtitle" class="report-subtitle"></p>
+                    </div>
+                    <button class="btn-print" onclick="printReport()">🖨️ Print Report</button>
+                </div>
+
+                <!-- Summary badges -->
+                <div class="report-summary" id="report-summary"></div>
+
+                <div class="table-wrap">
+                    <table id="report-table">
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Name (Role)</th>
+                                <th>Item</th>
+                                <th>Category</th>
+                                <th>Qty</th>
+                                <th>Remarks</th>
+                            </tr>
+                        </thead>
+                        <tbody id="report-body">
+                            <tr><td colspan="6" class="empty-row">No transactions found.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p id="report-count" class="report-count"></p>
             </div>
 
         </div>
     </div>
 
-    <!-- ACCOUNTS VIEW (admin only) -->
+    <!-- ── ACCOUNTS VIEW ── -->
     <div id="view-accounts" class="view">
         <div class="app-main">
             <div class="panel">
@@ -252,9 +305,9 @@
         </div>
     </div>
 
-</div>
+</div><!-- end app-screen -->
 
-<!-- ── EDIT MODAL ─────────────────────────────────────── -->
+<!-- ── EDIT MODAL ── -->
 <div id="edit-modal" class="modal-overlay" onclick="closeEditModal(event)">
     <div class="modal-card">
         <div class="modal-header">
@@ -304,7 +357,7 @@
     </div>
 </div>
 
-<!-- ── DELETE CONFIRM MODAL ───────────────────────────── -->
+<!-- ── DELETE MODAL ── -->
 <div id="delete-modal" class="modal-overlay" onclick="closeDeleteModal(event)">
     <div class="modal-card modal-sm">
         <div class="modal-header">
@@ -320,6 +373,9 @@
         </div>
     </div>
 </div>
+
+<!-- ── PRINT TEMPLATE (hidden, used for printing) ── -->
+<div id="print-area" style="display:none"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
