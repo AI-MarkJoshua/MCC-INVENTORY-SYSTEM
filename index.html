@@ -85,6 +85,7 @@
     <nav class="app-nav">
         <button class="nav-tab active" onclick="switchView('dashboard')" id="tab-dashboard">📊 Dashboard</button>
         <button class="nav-tab" onclick="switchView('inventory')" id="tab-inventory">📦 Inventory</button>
+        <button class="nav-tab" onclick="switchView('pos')" id="tab-pos">🛒 POS</button>
         <button class="nav-tab" onclick="switchView('reports')" id="tab-reports">📋 Reports</button>
         <button class="nav-tab" onclick="switchView('accounts')" id="tab-accounts" style="display:none">👥 Accounts</button>
     </nav>
@@ -115,39 +116,128 @@
     <div id="view-inventory" class="view">
         <div class="app-main">
             <div class="panel" id="stock-entry-panel">
-                <h2 class="panel-title">Stock Entry</h2>
-                <div class="input-row">
-                    <div class="field flex2">
-                        <label>Item Name</label>
-                        <div class="custom-dropdown">
-                            <input type="text" id="item-name" placeholder="e.g. Chain, Saddle, Wheel 26" autocomplete="off">
-                            <div class="dropdown-arrow">▼</div>
-                            <div id="items-dropdown" class="dropdown-list"></div>
+                <div class="panel-header">
+                    <h2 class="panel-title">📦 Stock Entry</h2>
+                    <div class="panel-subtitle">Manage your inventory items efficiently</div>
+                </div>
+                
+                <div class="stock-entry-form">
+                    <!-- Item Information Section -->
+                    <div class="form-section">
+                        <div class="section-header">
+                            <div class="section-icon">📋</div>
+                            <div class="section-title">Item Information</div>
+                        </div>
+                        <div class="form-grid">
+                            <div class="form-group full-width">
+                                <label for="item-name" class="form-label">
+                                    <span class="label-text">Item Name</span>
+                                    <span class="label-required">*</span>
+                                </label>
+                                <div class="input-wrapper">
+                                    <div class="custom-dropdown">
+                                        <input type="text" id="item-name" class="form-input" placeholder="e.g. Chain, Saddle, Wheel 26" autocomplete="off">
+                                        <div class="dropdown-arrow">▼</div>
+                                        <div id="items-dropdown" class="dropdown-list"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="item-category" class="form-label">
+                                    <span class="label-text">Category</span>
+                                    <span class="label-required">*</span>
+                                </label>
+                                <div class="input-wrapper">
+                                    <select id="item-category" class="form-select">
+                                        <option value="">-- Select Category --</option>
+                                        <option>UNITS</option>
+                                        <option>PARTS</option>
+                                        <option>SHIMANO</option>
+                                        <option>TIRES &amp; TUBE</option>
+                                        <option>ACCESSORIES</option>
+                                        <option>Others</option>
+                                        <option value="__custom__">+ Add Custom Category</option>
+                                    </select>
+                                </div>
+                                <div id="custom-category-wrap" class="custom-input-wrap">
+                                    <input type="text" id="custom-category" class="form-input" placeholder="Type custom category...">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="item-supplier" class="form-label">
+                                    <span class="label-text">Supplier</span>
+                                </label>
+                                <div class="input-wrapper">
+                                    <select id="item-supplier" class="form-select">
+                                        <option value="">-- Select Supplier --</option>
+                                        <option>A &amp; G Bike Shop</option>
+                                        <option>Cebu Kent Cycle</option>
+                                        <option>Shopee</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="field flex1">
-                        <label>Category</label>
-                        <select id="item-category" onchange="handleCategoryChange(this, 'custom-category-wrap')">
-                            <option value="">-- Category --</option>
-                            <option>Chain</option><option>Seat / Saddle</option><option>Wheels</option>
-                            <option>Brakes</option><option>Pedals</option><option>Handlebars</option>
-                            <option>Frame</option><option>Tires</option><option>Gears / Derailleur</option>
-                            <option>Lights</option><option>Other</option>
-                            <option value="__custom__">+ Add Custom Category</option>
-                        </select>
-                        <div id="custom-category-wrap" style="display:none; margin-top:6px">
-                            <input type="text" id="custom-category" placeholder="Type custom category...">
+
+                    <!-- Stock & Pricing Section -->
+                    <div class="form-section">
+                        <div class="section-header">
+                            <div class="section-icon">💰</div>
+                            <div class="section-title">Stock & Pricing</div>
+                        </div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="item-qty" class="form-label">
+                                    <span class="label-text">Quantity</span>
+                                    <span class="label-required">*</span>
+                                </label>
+                                <div class="input-wrapper">
+                                    <input type="number" id="item-qty" class="form-input" placeholder="0" min="1">
+                                    <div class="input-icon">📊</div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="item-wholesale" class="form-label">
+                                    <span class="label-text">Wholesale Price</span>
+                                    <span class="label-currency">₱</span>
+                                </label>
+                                <div class="input-wrapper">
+                                    <input type="number" id="item-wholesale" class="form-input" placeholder="0.00" min="0" step="0.01">
+                                    <div class="input-icon">💵</div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="item-retail" class="form-label">
+                                    <span class="label-text">Retail Price</span>
+                                    <span class="label-currency">₱</span>
+                                </label>
+                                <div class="input-wrapper">
+                                    <input type="number" id="item-retail" class="form-input" placeholder="0.00" min="0" step="0.01">
+                                    <div class="input-icon">🏷️</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="field flex1">
-                        <label>Quantity</label>
-                        <input type="number" id="item-qty" placeholder="0" min="1">
+
+                    <!-- Action Buttons -->
+                    <div class="form-actions">
+                        <div class="action-buttons">
+                            <button class="btn btn-primary btn-stock-in" onclick="addStock()">
+                                <span class="btn-icon">▲</span>
+                                <span class="btn-text">Stock In</span>
+                            </button>
+                            <button class="btn btn-secondary btn-stock-out" onclick="removeStock()">
+                                <span class="btn-icon">▼</span>
+                                <span class="btn-text">Stock Out</span>
+                            </button>
+                        </div>
+                        <div class="action-hint">
+                            <span class="hint-icon">💡</span>
+                            <span class="hint-text">Stock In adds items, Stock Out removes items from inventory</span>
+                        </div>
                     </div>
                 </div>
-                <div class="btn-row">
-                    <button class="btn-in" onclick="addStock()">▲ Stock In</button>
-                    <button class="btn-out" onclick="removeStock()">▼ Stock Out</button>
-                </div>
+                
                 <p id="action-msg" class="action-msg"></p>
             </div>
 
@@ -164,12 +254,99 @@
                 </div>
                 <div class="table-wrap">
                     <table>
-                        <thead><tr><th>Item Name</th><th>Category</th><th>Qty</th><th>Status</th><th>Actions</th></tr></thead>
-                        <tbody id="items-body"><tr><td colspan="5" class="empty-row">Loading...</td></tr></tbody>
+                        <thead><tr><th>Item Name</th><th>Category</th><th>Supplier</th><th>Wholesale</th><th>Retail</th><th>Qty</th><th>Status</th><th>Actions</th></tr></thead>
+                        <tbody id="items-body"><tr><td colspan="8" class="empty-row">Loading...</td></tr></tbody>
                     </table>
                     <div class="pagination-container">
                         <div class="pagination-info"><span id="pagination-info-text">Showing 0 items</span></div>
                         <div class="pagination-controls" id="pagination-controls"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── POS VIEW ── -->
+    <div id="view-pos" class="view">
+        <div class="pos-layout">
+            <!-- LEFT: Product Search + Cart -->
+            <div class="pos-left">
+                <div class="panel pos-search-panel">
+                    <h2 class="panel-title">🛒 Point of Sale</h2>
+                    <div class="pos-customer-row">
+                        <div class="field" style="flex:1">
+                            <label>Customer Name <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+                            <input type="text" id="pos-customer" placeholder="Walk-in Customer">
+                        </div>
+                    </div>
+                    <div class="pos-search-row">
+                        <div class="custom-dropdown" style="flex:1">
+                            <input type="text" id="pos-search" placeholder="Search item to add to cart..." autocomplete="off" oninput="filterPosItems()">
+                            <div class="dropdown-arrow">▼</div>
+                            <div id="pos-dropdown" class="dropdown-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cart -->
+                <div class="panel pos-cart-panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">Cart Items</h2>
+                        <button class="btn-clear-cart" onclick="clearCart()">🗑️ Clear Cart</button>
+                    </div>
+                    <div id="cart-empty" class="cart-empty">
+                        <div class="cart-empty-icon">🛒</div>
+                        <p>No items in cart yet.</p>
+                        <p class="cart-empty-sub">Search for an item above to add it.</p>
+                    </div>
+                    <div class="table-wrap" id="cart-table-wrap" style="display:none">
+                        <table>
+                            <thead><tr><th>Item</th><th>Retail Price</th><th>Qty</th><th>Subtotal</th><th></th></tr></thead>
+                            <tbody id="cart-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: Checkout Summary -->
+            <div class="pos-right">
+                <div class="panel pos-checkout-panel">
+                    <h2 class="panel-title">💰 Checkout</h2>
+
+                    <div class="checkout-summary">
+                        <div class="checkout-row">
+                            <span>Subtotal</span>
+                            <span id="checkout-subtotal">₱0.00</span>
+                        </div>
+                        <div class="checkout-divider"></div>
+                        <div class="checkout-row checkout-total-row">
+                            <span>TOTAL</span>
+                            <span id="checkout-total">₱0.00</span>
+                        </div>
+                    </div>
+
+                    <div class="field" style="margin-top:20px">
+                        <label>Payment Amount (₱)</label>
+                        <input type="number" id="pos-payment" placeholder="0.00" min="0" step="0.01" oninput="calcChange()">
+                    </div>
+
+                    <div class="change-display" id="change-display">
+                        <div class="change-label">Change</div>
+                        <div class="change-amount" id="change-amount">₱0.00</div>
+                    </div>
+
+                    <button class="btn-primary full btn-checkout" id="checkout-btn" onclick="processCheckout()">
+                        <span class="btn-text">✓ Process Sale</span>
+                        <span class="btn-loader" style="display:none">Processing...</span>
+                    </button>
+                    <p id="pos-msg" class="action-msg" style="margin-top:10px;text-align:center"></p>
+                </div>
+
+                <!-- Recent Sales -->
+                <div class="panel pos-recent-panel">
+                    <h2 class="panel-title">Recent Sales</h2>
+                    <div id="recent-sales-list">
+                        <div class="empty-row" style="padding:20px;text-align:center;font-size:13px;color:var(--muted)">No sales yet today.</div>
                     </div>
                 </div>
             </div>
@@ -317,17 +494,28 @@
             <div class="field"><label>Item Name</label><input type="text" id="edit-name" placeholder="Item name"></div>
             <div class="field">
                 <label>Category</label>
-                <select id="edit-category" onchange="handleCategoryChange(this, 'edit-custom-wrap')">
+                <select id="edit-category">
                     <option value="">-- Category --</option>
-                    <option>Chain</option><option>Seat / Saddle</option><option>Wheels</option>
-                    <option>Brakes</option><option>Pedals</option><option>Handlebars</option>
-                    <option>Frame</option><option>Tires</option><option>Gears / Derailleur</option>
-                    <option>Lights</option><option>Other</option>
-                    <option value="__custom__">+ Add Custom Category</option>
+                    <option>UNITS</option>
+                    <option>PARTS</option>
+                    <option>SHIMANO</option>
+                    <option>TIRES &amp; TUBE</option>
+                    <option>ACCESSORIES</option>
+                    <option>Others</option>
                 </select>
-                <div id="edit-custom-wrap" style="display:none; margin-top:6px">
-                    <input type="text" id="edit-custom-category" placeholder="Type custom category...">
-                </div>
+            </div>
+            <div class="field">
+                <label>Supplier</label>
+                <select id="edit-supplier">
+                    <option value="">-- Supplier --</option>
+                    <option>A &amp; G Bike Shop</option>
+                    <option>Cebu Kent Cycle</option>
+                    <option>Shopee</option>
+                </select>
+            </div>
+            <div class="input-row">
+                <div class="field flex1"><label>Wholesale Price (₱)</label><input type="number" id="edit-wholesale" placeholder="0.00" min="0" step="0.01"></div>
+                <div class="field flex1"><label>Retail Price (₱)</label><input type="number" id="edit-retail" placeholder="0.00" min="0" step="0.01"></div>
             </div>
             <div class="field"><label>Quantity</label><input type="number" id="edit-qty" placeholder="0" min="0"></div>
             <p id="edit-error" class="form-error"></p>
@@ -411,6 +599,21 @@
                 <span class="btn-text">Send Reset Email</span>
                 <span class="btn-loader" style="display:none">Sending...</span>
             </button>
+        </div>
+    </div>
+</div>
+
+<!-- ── RECEIPT MODAL ── -->
+<div id="receipt-modal" class="modal-overlay" onclick="closeReceiptModal(event)">
+    <div class="modal-card modal-receipt">
+        <div class="modal-header">
+            <h3>Sale Receipt</h3>
+            <button class="modal-close" onclick="closeReceiptModal()">✕</button>
+        </div>
+        <div class="modal-body" id="receipt-content"></div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeReceiptModal()">Close</button>
+            <button class="btn-primary" onclick="printReceipt()">🖨️ Print Receipt</button>
         </div>
     </div>
 </div>

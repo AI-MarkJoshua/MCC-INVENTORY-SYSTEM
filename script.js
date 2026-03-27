@@ -18,6 +18,11 @@ let accountFilter   = 'all';
 let resetTargetEmail = null;
 let isResettingPassword = false;
 
+// ── POS STATE ─────────────────────────────────────────────
+let cart = []; // [{itemId, name, retailPrice, qty, stock}]
+let recentSales = [];
+let lastReceiptData = null;
+
 // ── HELPERS ───────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 
@@ -59,6 +64,8 @@ const fmtDateTime = iso => {
         + ' ' + d.toLocaleTimeString('en-PH', { hour:'2-digit', minute:'2-digit', hour12: true });
 };
 
+const fmtPeso = n => '₱' + parseFloat(n || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
 // ── AUTH SCREENS ──────────────────────────────────────────
 function showForgotPassword() {
     $('forgot-email').value = $('login-email').value || '';
@@ -80,19 +87,6 @@ async function sendResetEmail() {
     setMsg('forgot-success', '✓ Reset link sent! Check your email inbox.');
 }
 
-// ── CATEGORY HELPERS ──────────────────────────────────────
-function handleCategoryChange(selectEl, wrapId) {
-    const wrap = $(wrapId);
-    if (!wrap) return;
-    wrap.style.display = selectEl.value === '__custom__' ? 'block' : 'none';
-}
-function getCategoryValue(selectId, customId) {
-    const sel = $(selectId);
-    if (!sel) return '';
-    if (sel.value === '__custom__') return $(customId)?.value.trim() || '';
-    return sel.value;
-}
-
 // ── VIEW SWITCHING ────────────────────────────────────────
 function switchView(view) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -103,6 +97,7 @@ function switchView(view) {
     if (view === 'dashboard') loadDashboard();
     if (view === 'inventory') loadItems();
     if (view === 'reports')   initReportDefaults();
+    if (view === 'pos')       initPOS();
 }
 
 // ── LOGIN ─────────────────────────────────────────────────
@@ -116,7 +111,6 @@ async function login() {
     setLoading('login-btn', false);
     if (error) return setMsg('login-error','Invalid email or password.');
 
-    // Check if account is active
     const { data: profile } = await supabaseClient
         .from('profiles').select('is_active, role, full_name').eq('id', data.user.id).single();
 
@@ -139,12 +133,7 @@ async function logout() {
 
 // ── INIT APP ──────────────────────────────────────────────
 async function initApp(user) {
-    // Block initApp during password reset
-    if (isResettingPassword) {
-        console.log('initApp blocked during password reset');
-        return;
-    }
-    
+    if (isResettingPassword) return;
     currentUser = user;
     const { data: profile } = await supabaseClient
         .from('profiles').select('role, full_name').eq('id', user.id).single();
@@ -157,7 +146,6 @@ async function initApp(user) {
     $('tab-accounts').style.display = currentRole === 'admin' ? '' : 'none';
     showScreen('app-screen');
     switchView('dashboard');
-    await updateCategoryDropdowns();
     loadItems();
     clearStockInputs();
 }
@@ -165,11 +153,8 @@ async function initApp(user) {
 // ── SESSION CHECK ─────────────────────────────────────────
 (async () => {
     showScreen('login-screen');
-    
-    // ONLY disable auto-login, allow session recovery for password reset
     const { data } = await supabaseClient.auth.getSession();
     if (data.session && !isResettingPassword) {
-        // Check active status before auto-login
         const { data: profile } = await supabaseClient
             .from('profiles').select('is_active').eq('id', data.session.user.id).single();
         if (profile && profile.is_active === false) {
@@ -179,67 +164,18 @@ async function initApp(user) {
             await initApp(data.session.user);
         }
     }
-    
-    // Create a flag to track if we're in password reset mode
     let authListenerSetup = false;
-    
-    // Only set up auth listener if not in password reset mode
     const setupAuthListener = () => {
         if (authListenerSetup) return;
         authListenerSetup = true;
-        
         supabaseClient.auth.onAuthStateChange(async (_event, session) => {
-            // Block auto-login during password reset, but allow session recovery
-            if (isResettingPassword) {
-                console.log('Password reset in progress, blocking auto-login');
-                return;
-            }
-            
+            if (isResettingPassword) return;
             if (session && !currentUser) await initApp(session.user);
             else if (!session) showScreen('login-screen');
         });
     };
-    
-    // Setup auth listener immediately
     setupAuthListener();
 })();
-
-// ── CUSTOM CATEGORIES ─────────────────────────────────────
-async function saveCustomCategory(name) {
-    if (!name) return;
-    try {
-        const { data: existing } = await supabaseClient
-            .from('custom_categories').select('*').eq('name', name).single();
-        if (existing) return;
-        await supabaseClient.from('custom_categories').insert([{ name }]);
-    } catch(e) {}
-}
-async function loadCustomCategories() {
-    try {
-        const { data } = await supabaseClient
-            .from('custom_categories').select('*').order('name', { ascending: true });
-        return data || [];
-    } catch(e) { return []; }
-}
-async function updateCategoryDropdowns() {
-    const customCats = await loadCustomCategories();
-    ['item-category','edit-category'].forEach(selId => {
-        const sel = $(selId);
-        if (!sel) return;
-        const cv = sel.value;
-        const defaults = ['Chain','Seat / Saddle','Wheels','Brakes','Pedals','Handlebars','Frame','Tires','Gears / Derailleur','Lights','Other'];
-        Array.from(sel.options).forEach(opt => {
-            if (opt.value && opt.value !== '__custom__' && !defaults.includes(opt.text)) sel.remove(opt.index);
-        });
-        const addOpt = Array.from(sel.options).find(o => o.value === '__custom__');
-        customCats.forEach(cat => {
-            const o = document.createElement('option');
-            o.value = cat.name; o.textContent = cat.name;
-            sel.insertBefore(o, addOpt);
-        });
-        if (cv) sel.value = cv;
-    });
-}
 
 // ── CREATE ACCOUNT ────────────────────────────────────────
 async function createAccount() {
@@ -292,12 +228,7 @@ function renderAccounts() {
     let filtered = allAccounts;
     if (accountFilter === 'active')   filtered = allAccounts.filter(a => a.is_active !== false);
     if (accountFilter === 'inactive') filtered = allAccounts.filter(a => a.is_active === false);
-
-    if (!filtered.length) {
-        container.innerHTML = `<div class="empty-row">No accounts found.</div>`;
-        return;
-    }
-
+    if (!filtered.length) { container.innerHTML = `<div class="empty-row">No accounts found.</div>`; return; }
     container.innerHTML = filtered.map(p => {
         const isActive = p.is_active !== false;
         const isSelf   = p.id === currentUser?.id;
@@ -333,16 +264,13 @@ function renderAccounts() {
     }).join('');
 }
 
-// ── TOGGLE ACTIVE STATUS ──────────────────────────────────
 async function toggleAccountStatus(profileId, currentlyActive) {
-    const newStatus = !currentlyActive;
     const { error } = await supabaseClient
-        .from('profiles').update({ is_active: newStatus }).eq('id', profileId);
+        .from('profiles').update({ is_active: !currentlyActive }).eq('id', profileId);
     if (error) { alert('Error updating status: ' + error.message); return; }
     loadAccounts();
 }
 
-// ── EDIT ACCOUNT MODAL ────────────────────────────────────
 function openEditAccountModal(profileId) {
     const profile = allAccounts.find(a => a.id === profileId);
     if (!profile) return;
@@ -368,24 +296,16 @@ async function saveAccountEdit() {
     setMsg('edit-account-error','');
     if (!name) return setMsg('edit-account-error','Full name is required.');
     if (pass && pass.length < 6) return setMsg('edit-account-error','New password must be at least 6 characters.');
-
     setLoading('edit-account-btn', true);
     const { error } = await supabaseClient.from('profiles').update({ full_name: name, role }).eq('id', id);
     if (error) { setLoading('edit-account-btn', false); return setMsg('edit-account-error', error.message); }
-
-    // If updating own name, refresh header
-    if (id === currentUser?.id) {
-        currentName = name;
-        $('user-label').textContent = name;
-    }
-
+    if (id === currentUser?.id) { currentName = name; $('user-label').textContent = name; }
     setLoading('edit-account-btn', false);
     $('edit-account-modal').classList.remove('active');
     document.body.style.overflow = '';
     loadAccounts();
 }
 
-// ── RESET PASSWORD MODAL ──────────────────────────────────
 function openResetModal(email) {
     resetTargetEmail = email;
     $('reset-user-email').textContent = email;
@@ -418,7 +338,7 @@ async function logTransaction(itemId, itemName, category, qty, type) {
         await supabaseClient.from('transactions').insert([{
             item_id:   itemId,
             item_name: itemName,
-            category:  category || 'Other',
+            category:  category || 'Others',
             quantity:  qty,
             type,
             user_id:   currentUser?.id || null,
@@ -430,34 +350,39 @@ async function logTransaction(itemId, itemName, category, qty, type) {
 
 // ── STOCK IN ──────────────────────────────────────────────
 async function addStock() {
-    const name     = $('item-name').value.trim();
-    const catSel   = $('item-category');
-    const category = getCategoryValue('item-category', 'custom-category');
-    const qty      = parseInt($('item-qty').value);
+    const name      = $('item-name').value.trim();
+    const category  = $('item-category').value;
+    const supplier  = $('item-supplier').value;
+    const qty       = parseInt($('item-qty').value);
+    const wholesale = parseFloat($('item-wholesale').value) || 0;
+    const retail    = parseFloat($('item-retail').value) || 0;
     setMsg('action-msg','');
     if (!name)            return setMsg('action-msg','Please enter an item name.', true);
     if (!qty || qty <= 0) return setMsg('action-msg','Enter a valid quantity.', true);
-    if (catSel.value === '__custom__' && category) {
-        await saveCustomCategory(category); await updateCategoryDropdowns();
-    }
+
     const { data: existing } = await supabaseClient.from('items').select('*').ilike('name', name);
     let itemId;
     if (existing && existing.length > 0) {
-        const item = existing[0];
+        const item   = existing[0];
         const newQty = item.quantity + qty;
-        const { error } = await supabaseClient.from('items')
-            .update({ quantity: newQty, category: category || item.category }).eq('id', item.id);
+        const updates = { quantity: newQty };
+        if (category)  updates.category  = category;
+        if (supplier)  updates.supplier  = supplier;
+        if (wholesale) updates.wholesale_price = wholesale;
+        if (retail)    updates.retail_price    = retail;
+        const { error } = await supabaseClient.from('items').update(updates).eq('id', item.id);
         if (error) return setMsg('action-msg', error.message, true);
         itemId = item.id;
-        setMsg('action-msg', `✓ "${name}" already exists — quantity updated to ${newQty}`);
+        setMsg('action-msg', `✓ "${name}" updated — quantity now ${newQty}`);
     } else {
         const { data: inserted, error } = await supabaseClient.from('items')
-            .insert([{ name, quantity: qty, category: category || 'Other' }]).select().single();
+            .insert([{ name, quantity: qty, category: category || 'Others', supplier: supplier || '', wholesale_price: wholesale, retail_price: retail }])
+            .select().single();
         if (error) return setMsg('action-msg', error.message, true);
         itemId = inserted?.id;
         setMsg('action-msg', `✓ Added ${qty} unit(s) of "${name}"`);
     }
-    await logTransaction(itemId, name, category || 'Other', qty, 'stock_in');
+    await logTransaction(itemId, name, category || 'Others', qty, 'stock_in');
     clearStockInputs(); loadItems();
 }
 
@@ -484,9 +409,9 @@ async function removeStock() {
 // ── LOAD ITEMS ────────────────────────────────────────────
 async function loadItems() {
     const tbody = $('items-body');
-    tbody.innerHTML = `<tr><td colspan="5" class="empty-row">Loading...</td></tr>`;
+    if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="empty-row">Loading...</td></tr>`;
     const { data, error } = await supabaseClient.from('items').select('*').order('name', { ascending: true });
-    if (error) { tbody.innerHTML = `<tr><td colspan="5" class="empty-row" style="color:var(--red)">Error: ${error.message}</td></tr>`; return; }
+    if (error) { if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="empty-row" style="color:var(--red)">Error: ${error.message}</td></tr>`; return; }
     allItems = data || [];
     updateDatalist(allItems); updateStats(allItems); updateFilterButtons(allItems);
     applyFilters(); setupItemNameAutoComplete();
@@ -495,6 +420,7 @@ async function loadItems() {
 function updateFilterButtons(items) {
     const cats = [...new Set(items.map(i => i.category).filter(Boolean))].sort();
     const row = $('filter-row');
+    if (!row) return;
     row.innerHTML = `<button class="filter-btn ${activeCategory===''?'active':''}" onclick="filterByCategory('',this)">All</button>`;
     cats.forEach(cat => {
         const label = cat.length > 14 ? cat.substring(0,14)+'…' : cat;
@@ -512,7 +438,7 @@ function applyFilters() {
 
 function renderItems() {
     const tbody = $('items-body');
-    if (!filteredItems.length) { tbody.innerHTML = `<tr><td colspan="5" class="empty-row">No items found.</td></tr>`; updatePagination(); return; }
+    if (!filteredItems.length) { tbody.innerHTML = `<tr><td colspan="8" class="empty-row">No items found.</td></tr>`; updatePagination(); return; }
     const start = (currentPage-1)*itemsPerPage, end = start+itemsPerPage;
     tbody.innerHTML = filteredItems.slice(start, end).map(item => {
         const badge = item.quantity===0
@@ -527,6 +453,9 @@ function renderItems() {
         return `<tr>
             <td><strong>${escHtml(item.name)}</strong></td>
             <td><span class="cat-tag">${escHtml(item.category||'—')}</span></td>
+            <td><span class="supplier-tag">${escHtml(item.supplier||'—')}</span></td>
+            <td style="font-size:13px;color:var(--muted)">${item.wholesale_price ? fmtPeso(item.wholesale_price) : '—'}</td>
+            <td style="font-size:14px;font-weight:600;color:var(--green)">${item.retail_price ? fmtPeso(item.retail_price) : '—'}</td>
             <td style="font-size:16px;font-weight:700">${item.quantity}</td>
             <td>${badge}</td>
             <td class="actions-cell">${actions}</td>
@@ -549,21 +478,19 @@ function updateDatalist(items) {
     items.forEach(item => {
         const div = document.createElement('div');
         div.className = 'dropdown-item'; div.textContent = item.name;
-        div.onclick = () => selectItem(item.name, item.category);
+        div.onclick = () => selectItem(item.name, item.category, item.supplier, item.wholesale_price, item.retail_price);
         dd.appendChild(div);
     });
 }
 
-function selectItem(name, category) {
+function selectItem(name, category, supplier, wholesale, retail) {
     const input=$('item-name'), catSel=$('item-category'), dd=$('items-dropdown'), wrap=document.querySelector('.custom-dropdown');
     input.value = name;
-    if (category) {
-        const opts = Array.from(catSel.options).map(o=>o.value);
-        if (opts.includes(category)) { catSel.value=category; $('custom-category-wrap').style.display='none'; }
-        else { catSel.value='__custom__'; $('custom-category-wrap').style.display='block'; if($('custom-category'))$('custom-category').value=category; }
-    }
+    if (category) catSel.value = category;
+    if (supplier) $('item-supplier').value = supplier;
+    if (wholesale) $('item-wholesale').value = wholesale;
+    if (retail) $('item-retail').value = retail;
     dd.classList.remove('active'); wrap.classList.remove('active');
-    input.dispatchEvent(new Event('input'));
 }
 
 function filterItems() { applyFilters(); }
@@ -576,12 +503,14 @@ function filterByCategory(cat, btn) {
 // ── EDIT ITEM MODAL ───────────────────────────────────────
 function openEditModal(id) {
     const item = allItems.find(i=>i.id===id); if (!item) return;
-    $('edit-id').value=item.id; $('edit-name').value=item.name; $('edit-qty').value=item.quantity;
+    $('edit-id').value         = item.id;
+    $('edit-name').value       = item.name;
+    $('edit-qty').value        = item.quantity;
+    $('edit-wholesale').value  = item.wholesale_price || '';
+    $('edit-retail').value     = item.retail_price || '';
     setMsg('edit-error','');
-    const sel=$('edit-category'), opts=Array.from(sel.options).map(o=>o.value);
-    if (opts.includes(item.category)) { sel.value=item.category; $('edit-custom-wrap').style.display='none'; }
-    else if (item.category) { sel.value='__custom__'; $('edit-custom-wrap').style.display='block'; $('edit-custom-category').value=item.category; }
-    else { sel.value=''; $('edit-custom-wrap').style.display='none'; }
+    $('edit-category').value   = item.category || '';
+    $('edit-supplier').value   = item.supplier  || '';
     $('edit-modal').classList.add('active'); document.body.style.overflow='hidden';
 }
 function closeEditModal(e) {
@@ -589,19 +518,24 @@ function closeEditModal(e) {
     $('edit-modal').classList.remove('active'); document.body.style.overflow='';
 }
 async function saveEdit() {
-    const id=parseInt($('edit-id').value), name=$('edit-name').value.trim();
-    const catSel=$('edit-category'), category=getCategoryValue('edit-category','edit-custom-category');
-    const qty=parseInt($('edit-qty').value);
+    const id        = parseInt($('edit-id').value);
+    const name      = $('edit-name').value.trim();
+    const category  = $('edit-category').value;
+    const supplier  = $('edit-supplier').value;
+    const wholesale = parseFloat($('edit-wholesale').value) || 0;
+    const retail    = parseFloat($('edit-retail').value) || 0;
+    const qty       = parseInt($('edit-qty').value);
     setMsg('edit-error','');
     if (!name) return setMsg('edit-error','Item name is required.');
     if (isNaN(qty)||qty<0) return setMsg('edit-error','Quantity must be 0 or more.');
     const dup=allItems.find(i=>i.name.toLowerCase()===name.toLowerCase()&&i.id!==id);
-    if (dup) return setMsg('edit-error',`"${name}" already exists. Use Stock In to add quantity instead.`);
-    if (catSel.value==='__custom__'&&category) { await saveCustomCategory(category); await updateCategoryDropdowns(); }
+    if (dup) return setMsg('edit-error',`"${name}" already exists.`);
     const btn=document.querySelector('#edit-modal .btn-primary');
     const t=btn.querySelector('.btn-text'), l=btn.querySelector('.btn-loader');
     t.style.display='none'; l.style.display=''; btn.disabled=true;
-    const { error }=await supabaseClient.from('items').update({ name, category:category||'Other', quantity:qty }).eq('id',id);
+    const { error }=await supabaseClient.from('items').update({
+        name, category: category||'Others', supplier: supplier||'', wholesale_price: wholesale, retail_price: retail, quantity: qty
+    }).eq('id',id);
     t.style.display=''; l.style.display='none'; btn.disabled=false;
     if (error) return setMsg('edit-error', error.message);
     $('edit-modal').classList.remove('active'); document.body.style.overflow=''; loadItems();
@@ -626,8 +560,7 @@ async function confirmDelete() {
 // ── UTILS ─────────────────────────────────────────────────
 function clearStockInputs() {
     $('item-name').value=''; $('item-qty').value=''; $('item-category').value='';
-    $('custom-category-wrap').style.display='none';
-    if($('custom-category'))$('custom-category').value='';
+    $('item-supplier').value=''; $('item-wholesale').value=''; $('item-retail').value='';
 }
 
 // ── PAGINATION ────────────────────────────────────────────
@@ -672,10 +605,11 @@ function setupItemNameAutoComplete() {
         if (v) { dd.classList.add('active'); wrap.classList.add('active'); }
         else   { dd.classList.remove('active'); wrap.classList.remove('active'); }
         const match=allItems.find(i=>i.name.toLowerCase()===v.toLowerCase());
-        if (match?.category) {
-            const sel=$('item-category'), opts=Array.from(sel.options).map(o=>o.value);
-            if (opts.includes(match.category)) { sel.value=match.category; $('custom-category-wrap').style.display='none'; }
-            else { sel.value='__custom__'; $('custom-category-wrap').style.display='block'; if($('custom-category'))$('custom-category').value=match.category; }
+        if (match) {
+            if (match.category) $('item-category').value = match.category;
+            if (match.supplier) $('item-supplier').value = match.supplier;
+            if (match.wholesale_price) $('item-wholesale').value = match.wholesale_price;
+            if (match.retail_price)    $('item-retail').value    = match.retail_price;
         }
     });
     input.addEventListener('focus', function() {
@@ -694,7 +628,7 @@ function setupItemNameAutoComplete() {
 }
 
 document.addEventListener('keydown', e => {
-    if (e.key==='Escape') { closeEditModal(); closeDeleteModal(); closeEditAccountModal(); closeResetModal(); }
+    if (e.key==='Escape') { closeEditModal(); closeDeleteModal(); closeEditAccountModal(); closeResetModal(); closeReceiptModal(); }
 });
 
 // ── DASHBOARD ─────────────────────────────────────────────
@@ -724,7 +658,6 @@ function updateCategoryChart() {
 
 // ── REPORTS ───────────────────────────────────────────────
 function initReportDefaults() {
-    // Leave dates blank — user picks their own range
     $('report-results').style.display = 'none';
     setMsg('report-error','');
 }
@@ -736,21 +669,17 @@ async function generateReport() {
     setMsg('report-error','');
     if (!startDate || !endDate) return setMsg('report-error','Please select both a start date and an end date.');
     if (startDate > endDate)    return setMsg('report-error','Start date cannot be after end date.');
-
     const btn = $('report-generate-btn');
     const t=btn.querySelector('.btn-text'), l=btn.querySelector('.btn-loader');
     t.style.display='none'; l.style.display=''; btn.disabled=true;
-
     const endInclusive = new Date(endDate);
     endInclusive.setDate(endInclusive.getDate()+1);
     const endStr = endInclusive.toISOString().split('T')[0];
-
     let query = supabaseClient.from('transactions').select('*')
         .gte('created_at', startDate+'T00:00:00')
         .lt('created_at',  endStr+'T00:00:00')
         .order('created_at', { ascending: true });
     if (type !== 'both') query = query.eq('type', type);
-
     const { data, error } = await query;
     t.style.display=''; l.style.display='none'; btn.disabled=false;
     if (error) return setMsg('report-error','Error fetching report: '+error.message);
@@ -771,10 +700,7 @@ function renderReport(transactions, type, startDate, endDate) {
         ${type!=='stock_out'?`<div class="summary-badge summary-in">▲ ${totalIn} unit${totalIn!==1?'s':''} stocked in</div>`:''}
         ${type!=='stock_in'?`<div class="summary-badge summary-out">▼ ${totalOut} unit${totalOut!==1?'s':''} stocked out</div>`:''}`;
     const tbody=$('report-body');
-    if (!transactions.length) {
-        tbody.innerHTML=`<tr><td colspan="6" class="empty-row">No transactions found for this period.</td></tr>`;
-        $('report-count').textContent=''; return;
-    }
+    if (!transactions.length) { tbody.innerHTML=`<tr><td colspan="6" class="empty-row">No transactions found for this period.</td></tr>`; $('report-count').textContent=''; return; }
     tbody.innerHTML=transactions.map(tx=>{
         const rb=tx.type==='stock_in'
             ?`<span class="badge badge-in-remark">▲ Stock In</span>`
@@ -791,7 +717,6 @@ function renderReport(transactions, type, startDate, endDate) {
     $('report-count').textContent=`Total: ${transactions.length} record${transactions.length!==1?'s':''}`;
 }
 
-// ── PRINT REPORT ──────────────────────────────────────────
 function printReport() {
     const subtitle=$('report-subtitle')?.textContent||'';
     const summary=$('report-summary')?.innerHTML||'';
@@ -841,48 +766,408 @@ function printReport() {
     win.onload=()=>{ win.focus(); win.print(); };
 }
 
+// ════════════════════════════════════════════════════════
+// ── POS SYSTEM ──────────────────────────────────────────
+// ════════════════════════════════════════════════════════
+
+function initPOS() {
+    if (!allItems.length) loadItems().then(() => setupPosSearch());
+    else setupPosSearch();
+    renderCart();
+    renderRecentSales();
+}
+
+function setupPosSearch() {
+    const input = $('pos-search');
+    const dd    = $('pos-dropdown');
+    const wrap  = input?.closest('.custom-dropdown');
+    if (!input || !dd || !wrap) return;
+
+    // Remove old listeners by replacing element
+    const newInput = input.cloneNode(true);
+    input.parentNode.replaceChild(newInput, input);
+
+    newInput.addEventListener('input', function() {
+        const v = this.value.trim().toLowerCase();
+        const f = v ? allItems.filter(i => i.name.toLowerCase().includes(v) && i.quantity > 0) : allItems.filter(i => i.quantity > 0);
+        renderPosDropdown(f, dd, wrap);
+        dd.classList.toggle('active', true);
+        wrap.classList.toggle('active', true);
+    });
+    newInput.addEventListener('focus', function() {
+        const v = this.value.trim().toLowerCase();
+        const f = v ? allItems.filter(i => i.name.toLowerCase().includes(v) && i.quantity > 0) : allItems.filter(i => i.quantity > 0);
+        renderPosDropdown(f, dd, wrap);
+        dd.classList.add('active'); wrap.classList.add('active');
+    });
+
+    document.addEventListener('click', e => {
+        if (!wrap.contains(e.target)) { dd.classList.remove('active'); wrap.classList.remove('active'); }
+    });
+}
+
+function filterPosItems() {
+    const input = $('pos-search');
+    const dd    = $('pos-dropdown');
+    const wrap  = input?.closest('.custom-dropdown');
+    if (!input || !dd || !wrap) return;
+    const v = input.value.trim().toLowerCase();
+    const f = v ? allItems.filter(i => i.name.toLowerCase().includes(v) && i.quantity > 0) : allItems.filter(i => i.quantity > 0);
+    renderPosDropdown(f, dd, wrap);
+    dd.classList.add('active'); wrap.classList.add('active');
+}
+
+function renderPosDropdown(items, dd, wrap) {
+    if (!items.length) {
+        dd.innerHTML = '<div class="dropdown-item" style="color:var(--muted)">No items in stock</div>';
+        return;
+    }
+    dd.innerHTML = items.slice(0, 20).map(item => {
+        const price = item.retail_price ? fmtPeso(item.retail_price) : 'No price set';
+        return `<div class="dropdown-item pos-item-option" onclick="addToCart(${item.id})">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+                <div>
+                    <div style="font-weight:600;color:var(--text)">${escHtml(item.name)}</div>
+                    <div style="font-size:11px;color:var(--muted);margin-top:1px">${escHtml(item.category||'—')} · Stock: ${item.quantity}</div>
+                </div>
+                <div style="font-weight:700;color:var(--green);font-size:14px;white-space:nowrap">${price}</div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function addToCart(itemId) {
+    const item = allItems.find(i => i.id === itemId);
+    if (!item) return;
+    if (!item.retail_price || item.retail_price <= 0) {
+        if (!confirm(`"${item.name}" has no retail price set. Add anyway with ₱0.00?`)) return;
+    }
+
+    const existing = cart.find(c => c.itemId === itemId);
+    const availableStock = item.quantity - (existing ? existing.qty : 0);
+
+    if (availableStock <= 0) {
+        alert(`No more stock available for "${item.name}".`);
+        return;
+    }
+
+    if (existing) {
+        existing.qty++;
+    } else {
+        cart.push({ itemId: item.id, name: item.name, retailPrice: item.retail_price || 0, qty: 1, stock: item.quantity, category: item.category });
+    }
+
+    // Clear search
+    const input = $('pos-search');
+    const dd    = $('pos-dropdown');
+    const wrap  = input?.closest('.custom-dropdown');
+    if (input) input.value = '';
+    if (dd)    dd.classList.remove('active');
+    if (wrap)  wrap.classList.remove('active');
+
+    renderCart();
+}
+
+function removeFromCart(itemId) {
+    cart = cart.filter(c => c.itemId !== itemId);
+    renderCart();
+}
+
+function updateCartQty(itemId, delta) {
+    const c = cart.find(c => c.itemId === itemId);
+    if (!c) return;
+    const item = allItems.find(i => i.id === itemId);
+    const maxStock = item ? item.quantity : c.stock;
+    c.qty += delta;
+    if (c.qty <= 0) { removeFromCart(itemId); return; }
+    if (c.qty > maxStock) { c.qty = maxStock; }
+    renderCart();
+}
+
+function clearCart() {
+    if (cart.length === 0) return;
+    if (!confirm('Clear all items from cart?')) return;
+    cart = [];
+    $('pos-customer').value = '';
+    $('pos-payment').value  = '';
+    renderCart();
+}
+
+function renderCart() {
+    const empty   = $('cart-empty');
+    const tableWr = $('cart-table-wrap');
+    const tbody   = $('cart-body');
+
+    if (!cart.length) {
+        empty.style.display   = '';
+        tableWr.style.display = 'none';
+        updateCheckout();
+        return;
+    }
+
+    empty.style.display   = 'none';
+    tableWr.style.display = '';
+
+    tbody.innerHTML = cart.map(c => `
+        <tr>
+            <td>
+                <div style="font-weight:600;color:var(--text)">${escHtml(c.name)}</div>
+                <div style="font-size:11px;color:var(--muted)">${escHtml(c.category||'—')}</div>
+            </td>
+            <td style="color:var(--green);font-weight:600">${fmtPeso(c.retailPrice)}</td>
+            <td>
+                <div class="qty-control">
+                    <button class="qty-btn" onclick="updateCartQty(${c.itemId}, -1)">−</button>
+                    <span class="qty-val">${c.qty}</span>
+                    <button class="qty-btn" onclick="updateCartQty(${c.itemId}, 1)">+</button>
+                </div>
+            </td>
+            <td style="font-weight:700;color:var(--text)">${fmtPeso(c.retailPrice * c.qty)}</td>
+            <td>
+                <button class="btn-action btn-del" onclick="removeFromCart(${c.itemId})" style="padding:4px 8px;font-size:11px">✕</button>
+            </td>
+        </tr>`).join('');
+
+    updateCheckout();
+}
+
+function getCartTotal() {
+    return cart.reduce((sum, c) => sum + (c.retailPrice * c.qty), 0);
+}
+
+function updateCheckout() {
+    const total = getCartTotal();
+    $('checkout-subtotal').textContent = fmtPeso(total);
+    $('checkout-total').textContent    = fmtPeso(total);
+    calcChange();
+}
+
+function calcChange() {
+    const total   = getCartTotal();
+    const payment = parseFloat($('pos-payment')?.value) || 0;
+    const change  = payment - total;
+    const el      = $('change-amount');
+    const disp    = $('change-display');
+    if (!el || !disp) return;
+
+    if (payment <= 0) {
+        el.textContent  = '₱0.00';
+        el.style.color  = 'var(--text)';
+        disp.classList.remove('change-insufficient');
+    } else if (change < 0) {
+        el.textContent  = `− ${fmtPeso(Math.abs(change))}`;
+        el.style.color  = 'var(--red)';
+        disp.classList.add('change-insufficient');
+    } else {
+        el.textContent  = fmtPeso(change);
+        el.style.color  = 'var(--green)';
+        disp.classList.remove('change-insufficient');
+    }
+}
+
+async function processCheckout() {
+    if (!cart.length)  return setMsg('pos-msg', 'Cart is empty!', true);
+    const total   = getCartTotal();
+    const payment = parseFloat($('pos-payment')?.value) || 0;
+    if (payment < total) return setMsg('pos-msg', 'Payment amount is less than total.', true);
+
+    const customer = $('pos-customer').value.trim() || 'Walk-in Customer';
+    setLoading('checkout-btn', true);
+
+    try {
+        // Deduct stock for each cart item
+        for (const c of cart) {
+            const item = allItems.find(i => i.id === c.itemId);
+            if (!item) continue;
+            const newQty = item.quantity - c.qty;
+            if (newQty < 0) throw new Error(`Insufficient stock for "${c.name}"`);
+            await supabaseClient.from('items').update({ quantity: newQty }).eq('id', c.itemId);
+            await logTransaction(c.itemId, c.name, c.category, c.qty, 'stock_out');
+        }
+
+        // Build receipt data
+        const receiptData = {
+            customer,
+            items:    [...cart],
+            total,
+            payment,
+            change:   payment - total,
+            soldBy:   currentName,
+            date:     new Date()
+        };
+        lastReceiptData = receiptData;
+
+        // Show receipt
+        showReceipt(receiptData);
+
+        // Add to recent sales
+        recentSales.unshift({ ...receiptData, id: Date.now() });
+        if (recentSales.length > 10) recentSales.pop();
+        renderRecentSales();
+
+        // Reset cart
+        cart = [];
+        $('pos-customer').value = '';
+        $('pos-payment').value  = '';
+        renderCart();
+        await loadItems(); // Refresh stock
+
+    } catch (err) {
+        setMsg('pos-msg', err.message, true);
+    }
+
+    setLoading('checkout-btn', false);
+}
+
+function showReceipt(data) {
+    const content = $('receipt-content');
+    const dateStr = data.date.toLocaleDateString('en-PH', { year:'numeric', month:'long', day:'numeric' });
+    const timeStr = data.date.toLocaleTimeString('en-PH', { hour:'2-digit', minute:'2-digit', hour12:true });
+    content.innerHTML = `
+        <div class="receipt-wrap">
+            <div class="receipt-header">
+                <img src="image/mcclogo.png" alt="MCC" class="receipt-logo" onerror="this.style.display='none'">
+                <div class="receipt-org">MCC<span>Inventory</span></div>
+                <div class="receipt-sub">Bike Parts &amp; Supplies</div>
+                <div class="receipt-date">${dateStr} · ${timeStr}</div>
+            </div>
+            <div class="receipt-customer">
+                <span class="receipt-label">Customer:</span> ${escHtml(data.customer)}
+            </div>
+            <div class="receipt-divider">- - - - - - - - - - - - - - - - - - - -</div>
+            <table class="receipt-items">
+                <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Sub</th></tr></thead>
+                <tbody>
+                    ${data.items.map(c=>`<tr>
+                        <td>${escHtml(c.name)}</td>
+                        <td style="text-align:center">${c.qty}</td>
+                        <td style="text-align:right">${fmtPeso(c.retailPrice)}</td>
+                        <td style="text-align:right;font-weight:700">${fmtPeso(c.retailPrice*c.qty)}</td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>
+            <div class="receipt-divider">- - - - - - - - - - - - - - - - - - - -</div>
+            <div class="receipt-totals">
+                <div class="receipt-row"><span>TOTAL</span><span class="receipt-total-num">${fmtPeso(data.total)}</span></div>
+                <div class="receipt-row"><span>CASH</span><span>${fmtPeso(data.payment)}</span></div>
+                <div class="receipt-row receipt-change-row"><span>CHANGE</span><span class="receipt-change-num">${fmtPeso(data.change)}</span></div>
+            </div>
+            <div class="receipt-divider">- - - - - - - - - - - - - - - - - - - -</div>
+            <div class="receipt-footer">
+                <p>Served by: ${escHtml(data.soldBy)}</p>
+                <p>Thank you for your purchase! 🚲</p>
+            </div>
+        </div>`;
+    $('receipt-modal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeReceiptModal(e) {
+    if (e && e.target !== $('receipt-modal')) return;
+    $('receipt-modal').classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+function printReceipt() {
+    if (!lastReceiptData) return;
+    const d = lastReceiptData;
+    const dateStr = d.date.toLocaleDateString('en-PH',{year:'numeric',month:'long',day:'numeric'});
+    const timeStr = d.date.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit',hour12:true});
+    const win = window.open('','_blank','width=400,height=600');
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Receipt</title>
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:'Courier New',monospace;font-size:12px;padding:20px;max-width:300px;margin:0 auto}
+        .logo{width:50px;height:50px;object-fit:contain;display:block;margin:0 auto 6px}
+        .org{text-align:center;font-size:18px;font-weight:900;letter-spacing:2px}
+        .org span{color:#e07b00}
+        .sub{text-align:center;font-size:10px;color:#666;margin-bottom:4px}
+        .date{text-align:center;font-size:10px;color:#999;margin-bottom:10px}
+        .customer{margin:8px 0;font-size:12px}
+        .divider{border:none;border-top:1px dashed #ccc;margin:10px 0}
+        table{width:100%;border-collapse:collapse;font-size:11px}
+        th{text-align:left;font-weight:700;padding:2px 0;border-bottom:1px solid #ddd}
+        th:last-child,td:last-child{text-align:right}
+        th:nth-child(2),td:nth-child(2){text-align:center}
+        th:nth-child(3),td:nth-child(3){text-align:right}
+        td{padding:3px 0}
+        .totals{margin-top:8px}
+        .tot-row{display:flex;justify-content:space-between;padding:2px 0;font-size:12px}
+        .tot-row.total{font-size:16px;font-weight:900;border-top:2px solid #000;margin-top:6px;padding-top:6px}
+        .tot-row.change{font-weight:700;color:#16a34a}
+        .footer{text-align:center;margin-top:12px;font-size:11px;color:#666}
+        @media print{@page{margin:0.5cm}body{padding:10px}}
+    </style></head><body>
+    <img src="image/mcclogo.png" class="logo" onerror="this.style.display='none'">
+    <div class="org">MCC<span>Inventory</span></div>
+    <div class="sub">Bike Parts & Supplies</div>
+    <div class="date">${dateStr} · ${timeStr}</div>
+    <div class="customer"><strong>Customer:</strong> ${escHtml(d.customer)}</div>
+    <hr class="divider">
+    <table>
+        <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Sub</th></tr></thead>
+        <tbody>${d.items.map(c=>`<tr>
+            <td>${escHtml(c.name)}</td>
+            <td style="text-align:center">${c.qty}</td>
+            <td style="text-align:right">${fmtPeso(c.retailPrice)}</td>
+            <td style="text-align:right">${fmtPeso(c.retailPrice*c.qty)}</td>
+        </tr>`).join('')}</tbody>
+    </table>
+    <hr class="divider">
+    <div class="totals">
+        <div class="tot-row total"><span>TOTAL</span><span>${fmtPeso(d.total)}</span></div>
+        <div class="tot-row"><span>CASH</span><span>${fmtPeso(d.payment)}</span></div>
+        <div class="tot-row change"><span>CHANGE</span><span>${fmtPeso(d.change)}</span></div>
+    </div>
+    <hr class="divider">
+    <div class="footer"><p>Served by: ${escHtml(d.soldBy)}</p><p>Thank you! 🚲</p></div>
+    </body></html>`);
+    win.document.close();
+    win.onload = () => { win.focus(); win.print(); };
+}
+
+function renderRecentSales() {
+    const list = $('recent-sales-list');
+    if (!list) return;
+    if (!recentSales.length) {
+        list.innerHTML = '<div style="padding:20px;text-align:center;font-size:13px;color:var(--muted)">No sales yet today.</div>';
+        return;
+    }
+    list.innerHTML = recentSales.map(s => {
+        const time = s.date.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit',hour12:true});
+        return `<div class="recent-sale-item" onclick="showReceipt(recentSales.find(x=>x.id===${s.id}))">
+            <div class="recent-sale-left">
+                <div class="recent-sale-customer">${escHtml(s.customer)}</div>
+                <div class="recent-sale-meta">${s.items.length} item${s.items.length!==1?'s':''} · ${time}</div>
+            </div>
+            <div class="recent-sale-total">${fmtPeso(s.total)}</div>
+        </div>`;
+    }).join('');
+}
+
 // ── HANDLE PASSWORD RESET REDIRECT ────────────────────────
 (async () => {
     const hash = window.location.hash;
     if (hash && hash.includes('type=recovery')) {
-        // Parse the access token from the URL hash
         const params = new URLSearchParams(hash.substring(1));
         const accessToken  = params.get('access_token');
         const refreshToken = params.get('refresh_token');
-
         if (accessToken) {
-            console.log('Processing password reset with access token');
-            
-            // Set the flag to prevent auto-login
             isResettingPassword = true;
-            
-            // Don't clear session first - try to set the new session directly
-            // This preserves the recovery token validity
-            const { data: sessionData, error: sessionError } = await supabaseClient.auth.setSession({
+            const { error: sessionError } = await supabaseClient.auth.setSession({
                 access_token:  accessToken,
                 refresh_token: refreshToken || ''
             });
-
             if (sessionError) {
-                console.error('Failed to set session:', sessionError);
                 alert('Invalid or expired reset link. Please request a new password reset.');
                 isResettingPassword = false;
                 showScreen('login-screen');
                 return;
             }
-
-            console.log('Session set successfully for password reset');
-
-            // Clear the hash from the URL
             history.replaceState(null, '', window.location.pathname);
-
-            // Force show the new password form immediately
             showNewPasswordScreen();
-            
-            // Add a guard to prevent any auto-navigation
             setTimeout(() => {
                 if (isResettingPassword && $('new-password-screen')) {
-                    // Ensure we're still on the password screen
                     document.querySelectorAll('.screen:not(#new-password-screen)').forEach(s => s.classList.remove('active'));
                     $('new-password-screen').classList.add('active');
                 }
@@ -892,7 +1177,6 @@ function printReport() {
 })();
 
 function showNewPasswordScreen() {
-    // Dynamically create the screen if it doesn't exist
     if (!$('new-password-screen')) {
         const screen = document.createElement('div');
         screen.id = 'new-password-screen';
@@ -930,8 +1214,6 @@ function showNewPasswordScreen() {
                 </div>
             </div>`;
         document.body.appendChild(screen);
-
-        // Hide all other screens
         document.querySelectorAll('.screen:not(#new-password-screen)').forEach(s => s.classList.remove('active'));
     } else {
         showScreen('new-password-screen');
@@ -945,20 +1227,16 @@ async function submitNewPassword() {
     const sucEl = $('new-pw-success');
     if (errEl) errEl.textContent = '';
     if (sucEl) sucEl.textContent = '';
-
     if (!pw1) { if (errEl) errEl.textContent = 'Please enter a new password.'; return; }
     if (pw1.length < 6) { if (errEl) errEl.textContent = 'Password must be at least 6 characters.'; return; }
     if (pw1 !== pw2) { if (errEl) errEl.textContent = 'Passwords do not match.'; return; }
-
     setLoading('new-pw-btn', true);
     const { error } = await supabaseClient.auth.updateUser({ password: pw1 });
     setLoading('new-pw-btn', false);
-
     if (error) { if (errEl) errEl.textContent = error.message; return; }
-
     if (sucEl) sucEl.textContent = '✓ Password updated! Redirecting to login...';
     await supabaseClient.auth.signOut();
-    isResettingPassword = false; // Reset the flag
+    isResettingPassword = false;
     setTimeout(() => {
         const el = $('new-password-screen');
         if (el) el.remove();
