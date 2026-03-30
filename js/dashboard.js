@@ -20,10 +20,6 @@ async function updateMonthlySales() {
     const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
 
-    console.log('🔍 Monthly Sales Debug:');
-    console.log('First of month:', firstOfMonth);
-    console.log('End of day:', endOfDay);
-
     const { data, error } = await supabaseClient
         .from('transactions')
         .select('quantity, retail_price, created_at, item_name')
@@ -31,16 +27,7 @@ async function updateMonthlySales() {
         .gte('created_at', firstOfMonth)
         .lte('created_at', endOfDay);
 
-    console.log('Raw data:', data);
-    console.log('Error:', error);
-
-    const totalRevenue = error ? 0 : (data || []).reduce((s, t) => {
-        const itemRevenue = t.quantity * (t.retail_price || 0);
-        console.log(`Item: ${t.item_name}, Qty: ${t.quantity}, Price: ${t.retail_price}, Revenue: ${itemRevenue}`);
-        return s + itemRevenue;
-    }, 0);
-
-    console.log('Total Revenue:', totalRevenue);
+    const totalRevenue = error ? 0 : (data || []).reduce((s, t) => s + (t.quantity * (t.retail_price || 0)), 0);
     
     const el = $('stat-low');
     if (el) el.textContent = fmtPeso(totalRevenue);

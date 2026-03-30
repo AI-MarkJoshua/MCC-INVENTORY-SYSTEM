@@ -52,15 +52,18 @@ function renderSalesReport(transactions, startDate, endDate, selectedUserName) {
 
     $('report-subtitle').textContent = `Sales Report · ${userLabel} · ${fmt(startDate)} — ${fmt(endDate)}`;
 
-    const totalUnitsSold   = transactions.reduce((s, t) => s + (t.quantity || 0), 0);
+    // Calculate totals from transactions
+    const totalUnitsSold = transactions.reduce((s, t) => s + (t.quantity || 0), 0);
+    const totalRevenue = transactions.reduce((s, t) => s + (t.quantity * (t.retail_price || 0)), 0);
     const totalTransactions = transactions.length;
 
     $('report-summary').innerHTML = `
-        <div class="summary-badge summary-total">📦 ${totalUnitsSold} Unit${totalUnitsSold !== 1 ? 's' : ''} Sold</div>
-        <div class="summary-badge summary-in">🧾 ${totalTransactions} Transaction${totalTransactions !== 1 ? 's' : ''}</div>
+        <div class="summary-badge summary-total">💰 ${fmtPeso(totalRevenue)}</div>
+        <div class="summary-badge summary-in">📦 ${totalUnitsSold} Unit${totalUnitsSold !== 1 ? 's' : ''} Sold</div>
+        <div class="summary-badge summary-out">🧾 ${totalTransactions} Transaction${totalTransactions !== 1 ? 's' : ''}</div>
     `;
 
-    // Reset table headers for sales view
+    // Update table headers for sales view
     const tableHead = $('report-table').querySelector('thead tr');
     tableHead.innerHTML = `
         <th>Date &amp; Time</th>
@@ -68,26 +71,33 @@ function renderSalesReport(transactions, startDate, endDate, selectedUserName) {
         <th>Item</th>
         <th>Category</th>
         <th>Qty Sold</th>
+        <th>Price</th>
+        <th>Total</th>
         <th>Remarks</th>
     `;
 
     const tbody = $('report-body');
     if (!transactions.length) {
-        tbody.innerHTML = `<tr><td colspan="6" class="empty-row">No sales found for this period.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="empty-row">No sales found for this period.</td></tr>`;
         $('report-count').textContent = '';
         return;
     }
 
-    tbody.innerHTML = transactions.map(tx => `<tr>
-        <td style="white-space:nowrap;font-size:13px">${fmtDateTime(tx.created_at)}</td>
-        <td><strong>${escHtml(tx.user_name || '—')}</strong><span class="role-chip">${escHtml(tx.user_role || '—')}</span></td>
-        <td><strong>${escHtml(tx.item_name || '—')}</strong></td>
-        <td><span class="cat-tag">${escHtml(tx.category || '—')}</span></td>
-        <td style="font-weight:700;font-size:15px">${tx.quantity}</td>
-        <td><span class="badge badge-out-remark">▼ Stock Out</span></td>
-    </tr>`).join('');
+    tbody.innerHTML = transactions.map(tx => {
+        const itemTotal = tx.quantity * (tx.retail_price || 0);
+        return `<tr>
+            <td style="white-space:nowrap;font-size:13px">${fmtDateTime(tx.created_at)}</td>
+            <td><strong>${escHtml(tx.user_name || '—')}</strong><span class="role-chip">${escHtml(tx.user_role || '—')}</span></td>
+            <td><strong>${escHtml(tx.item_name || '—')}</strong></td>
+            <td><span class="cat-tag">${escHtml(tx.category || '—')}</span></td>
+            <td style="font-weight:700;font-size:15px">${tx.quantity}</td>
+            <td style="font-weight:600;color:var(--muted)">${fmtPeso(tx.retail_price || 0)}</td>
+            <td style="font-weight:700;font-size:15px;color:var(--green)">${fmtPeso(itemTotal)}</td>
+            <td><span class="badge badge-out-remark">▼ Stock Out</span></td>
+        </tr>`;
+    }).join('');
 
-    $('report-count').textContent = `Total: ${totalTransactions} record${totalTransactions !== 1 ? 's' : ''} · ${totalUnitsSold} units sold`;
+    $('report-count').textContent = `Total: ${totalTransactions} record${totalTransactions !== 1 ? 's' : ''} · ${totalUnitsSold} units sold · Revenue: ${fmtPeso(totalRevenue)}`;
 }
 
 // Switch between inventory and sales reports
@@ -195,16 +205,15 @@ async function generateSalesReport() {
     t.style.display = 'none'; l.style.display = ''; btn.disabled = true;
 
     try {
-        const endInclusive = new Date(endDate);
-        endInclusive.setDate(endInclusive.getDate() + 1);
-        const endStr = endInclusive.toISOString().split('T')[0];
+        // Fix: Include end date by using lte instead of lt
+        const endOfDay = new Date(endDate + 'T23:59:59').toISOString();
 
         let query = supabaseClient
             .from('transactions')
             .select('*')
             .eq('type', 'stock_out')
             .gte('created_at', startDate + 'T00:00:00')
-            .lt('created_at',  endStr + 'T00:00:00')
+            .lte('created_at', endOfDay) // Fixed: include end date
             .order('created_at', { ascending: false });
 
         const selectedUser = $('sales-user-select').value;
@@ -222,67 +231,6 @@ async function generateSalesReport() {
         t.style.display = ''; l.style.display = 'none'; btn.disabled = false;
         setMsg('report-error', 'Error generating sales report: ' + err.message);
     }
-}
-
-function renderSalesReport(salesData, startDate, endDate, userId) {
-    const results = $('report-results');
-    results.style.display = 'block';
-    results.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-    const selectedUser = userId ? allUsers.find(u => u.id === userId) : null;
-    const userLabel = selectedUser ? selectedUser.name : 'All Users';
-    const fmt = d => new Date(d + 'T00:00:00').toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
-    
-    $('report-subtitle').textContent = `Sales Report · ${userLabel} · ${fmt(startDate)} — ${fmt(endDate)}`;
-
-    // Calculate totals
-    const totalRevenue = salesData.reduce((sum, sale) => sum + (sale.total || 0), 0);
-    const totalLabour = salesData.reduce((sum, sale) => sum + (sale.labour || 0), 0);
-    const totalItems = salesData.reduce((sum, sale) => sum + (sale.items ? sale.items.length : 0), 0);
-    const totalTransactions = salesData.length;
-
-    // Summary section
-    $('report-summary').innerHTML = `
-        <div class="summary-badge summary-total">💰 ${fmtPeso(totalRevenue)}</div>
-        <div class="summary-badge summary-in">📦 ${totalItems} Item${totalItems !== 1 ? 's' : ''} Sold</div>
-        <div class="summary-badge summary-out">🔧 ${fmtPeso(totalLabour)} Labour Charges</div>
-        <div class="summary-badge summary-total">🧾 ${totalTransactions} Transaction${totalTransactions !== 1 ? 's' : ''}</div>
-    `;
-
-    // Update table headers for sales report
-    const tableHead = $('report-table').querySelector('thead tr');
-    tableHead.innerHTML = `
-        <th>Date &amp; Time</th>
-        <th>Sold By</th>
-        <th>Customer</th>
-        <th>Items Sold</th>
-        <th>Labour</th>
-        <th>Total</th>
-    `;
-
-    const tbody = $('report-body');
-    if (!salesData.length) {
-        tbody.innerHTML = `<tr><td colspan="6" class="empty-row">No sales found for this period.</td></tr>`;
-        $('report-count').textContent = '';
-        return;
-    }
-
-    tbody.innerHTML = salesData.map(sale => {
-        const itemsList = sale.items ? sale.items.map(item => 
-            `${item.name} (${item.qty}x ${fmtPeso(item.retailPrice)})`
-        ).join(', ') : 'No items';
-        
-        return `<tr>
-            <td style="white-space:nowrap;font-size:13px">${fmtDateTime(sale.date)}</td>
-            <td><strong>${escHtml(sale.soldBy || '—')}</strong></td>
-            <td>${escHtml(sale.customer || '—')}</td>
-            <td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis">${escHtml(itemsList)}</td>
-            <td style="font-weight:700;color:var(--muted)">${sale.labour > 0 ? fmtPeso(sale.labour) : '—'}</td>
-            <td style="font-weight:700;font-size:15px;color:var(--green)">${fmtPeso(sale.total || 0)}</td>
-        </tr>`;
-    }).join('');
-    
-    $('report-count').textContent = `Total Sales: ${totalTransactions} transaction${totalTransactions !== 1 ? 's' : ''} · Revenue: ${fmtPeso(totalRevenue)}`;
 }
 
 function printReport() {
