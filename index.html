@@ -92,7 +92,13 @@
         <button class="nav-tab active" onclick="switchView('dashboard')" id="tab-dashboard">📊 Dashboard</button>
         <button class="nav-tab"        onclick="switchView('inventory')" id="tab-inventory">📦 Inventory</button>
         <button class="nav-tab"        onclick="switchView('pos')"       id="tab-pos">🛒 POS</button>
-        <button class="nav-tab"        onclick="switchView('reports')"   id="tab-reports">📋 Reports</button>
+        <div class="nav-dropdown" id="reports-dropdown">
+            <button class="nav-tab" onclick="toggleReportsDropdown()">📋 Reports</button>
+            <div class="dropdown-menu" id="reports-menu">
+                <a href="#" onclick="switchToReport('inventory')" class="dropdown-item">📦 Inventory Report</a>
+                <a href="#" onclick="switchToReport('sales')" class="dropdown-item">💰 Sales Report</a>
+            </div>
+        </div>
         <button class="nav-tab"        onclick="switchView('accounts')"  id="tab-accounts" style="display:none">👥 Accounts</button>
     </nav>
 
@@ -110,10 +116,11 @@
                     <div class="stat-num" id="stat-qty">—</div>
                     <div class="stat-label">Total Units</div>
                 </div>
-                <div class="stat-card warn">
-                    <div class="stat-num" id="stat-low">—</div>
-                    <div class="stat-label">Low Stock</div>
-                </div>
+               <!-- Change this stat card -->
+<div class="stat-card warn">
+    <div class="stat-num" id="stat-low">—</div>
+    <div class="stat-label">Monthly Sales</div>  <!-- was: Low Stock -->
+</div>
                 <div class="stat-card danger">
                     <div class="stat-num" id="stat-out">—</div>
                     <div class="stat-label">Out of Stock</div>
@@ -401,7 +408,13 @@
         <div class="app-main">
             <div class="panel">
                 <h2 class="panel-title">Generate Report</h2>
-                <div class="report-filters">
+                <div class="report-type-tabs">
+                    <button class="report-tab-btn active" onclick="switchReportType('inventory');">📦 Inventory Report</button>
+                    <button class="report-tab-btn" onclick="switchReportType('sales');">💰 Sales Report</button>
+                </div>
+                
+                <!-- Inventory Report Filters -->
+                <div id="inventory-filters" class="report-filters">
                     <div class="field flex1">
                         <label>Transaction Type</label>
                         <select id="report-type">
@@ -420,6 +433,30 @@
                     </div>
                     <div class="report-filter-btn">
                         <button class="btn-primary" id="report-generate-btn" onclick="generateReport()">
+                            <span class="btn-text">🔍 Generate</span>
+                            <span class="btn-loader" style="display:none">Loading...</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Sales Report Filters -->
+                <div id="sales-filters" class="report-filters" style="display:none">
+                    <div class="field flex1">
+                        <label>Staff/Admin</label>
+                        <select id="sales-user-select">
+                            <option value="">All Users</option>
+                        </select>
+                    </div>
+                    <div class="field flex1">
+                        <label>Start Date</label>
+                        <input type="date" id="sales-start">
+                    </div>
+                    <div class="field flex1">
+                        <label>End Date</label>
+                        <input type="date" id="sales-end">
+                    </div>
+                    <div class="report-filter-btn">
+                        <button class="btn-primary" id="sales-generate-btn" onclick="generateSalesReport()">
                             <span class="btn-text">🔍 Generate</span>
                             <span class="btn-loader" style="display:none">Loading...</span>
                         </button>

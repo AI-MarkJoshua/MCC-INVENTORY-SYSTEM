@@ -5,14 +5,45 @@ let categoryChart = null;
 async function loadDashboard() {
     if (!allItems.length) await loadItems();
     updateStats(allItems);
+    await updateMonthlySales();
     updateCategoryChart();
 }
 
-function updateStats(items) {
+async function updateStats(items) {
     $('stat-total').textContent = items.length;
     $('stat-qty').textContent   = items.reduce((s, i) => s + i.quantity, 0);
-    $('stat-low').textContent   = items.filter(i => i.quantity > 0 && i.quantity <= 5).length;
     $('stat-out').textContent   = items.filter(i => i.quantity === 0).length;
+}
+
+async function updateMonthlySales() {
+    const now = new Date();
+    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
+
+    console.log('🔍 Monthly Sales Debug:');
+    console.log('First of month:', firstOfMonth);
+    console.log('End of day:', endOfDay);
+
+    const { data, error } = await supabaseClient
+        .from('transactions')
+        .select('quantity, retail_price, created_at, item_name')
+        .eq('type', 'stock_out')
+        .gte('created_at', firstOfMonth)
+        .lte('created_at', endOfDay);
+
+    console.log('Raw data:', data);
+    console.log('Error:', error);
+
+    const totalRevenue = error ? 0 : (data || []).reduce((s, t) => {
+        const itemRevenue = t.quantity * (t.retail_price || 0);
+        console.log(`Item: ${t.item_name}, Qty: ${t.quantity}, Price: ${t.retail_price}, Revenue: ${itemRevenue}`);
+        return s + itemRevenue;
+    }, 0);
+
+    console.log('Total Revenue:', totalRevenue);
+    
+    const el = $('stat-low');
+    if (el) el.textContent = fmtPeso(totalRevenue);
 }
 
 function updateCategoryChart() {

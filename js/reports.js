@@ -1,8 +1,117 @@
 // ── REPORTS MODULE ────────────────────────────────────────
 
+let allUsers = [];
+
 function initReportDefaults() {
     $('report-results').style.display = 'none';
     setMsg('report-error', '');
+}
+
+// Load all users for sales report
+async function loadUsersForSalesReport() {
+    try {
+        // Pull distinct user_names from transactions instead of a separate users table
+        const { data, error } = await supabaseClient
+            .from('transactions')
+            .select('user_name, user_role')
+            .eq('type', 'stock_out');
+
+        if (error) throw error;
+
+        // Deduplicate by user_name
+        const seen = new Set();
+        allUsers = (data || []).filter(row => {
+            if (!row.user_name || seen.has(row.user_name)) return false;
+            seen.add(row.user_name);
+            return true;
+        });
+
+        populateUserSelect();
+    } catch (err) {
+        console.error('Error loading users:', err);
+    }
+}
+
+function populateUserSelect() {
+    const select = $('sales-user-select');
+    if (!select) return;
+    select.innerHTML = '<option value="">All Users</option>';
+    allUsers.forEach(user => {
+        const roleIcon = user.user_role === 'admin' ? '👑' : '👷';
+        select.innerHTML += `<option value="${escHtml(user.user_name)}">${roleIcon} ${escHtml(user.user_name)}</option>`;
+    });
+}
+
+function renderSalesReport(transactions, startDate, endDate, selectedUserName) {
+    const results = $('report-results');
+    results.style.display = 'block';
+    results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    const userLabel = selectedUserName || 'All Users';
+    const fmt = d => new Date(d + 'T00:00:00').toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    $('report-subtitle').textContent = `Sales Report · ${userLabel} · ${fmt(startDate)} — ${fmt(endDate)}`;
+
+    const totalUnitsSold   = transactions.reduce((s, t) => s + (t.quantity || 0), 0);
+    const totalTransactions = transactions.length;
+
+    $('report-summary').innerHTML = `
+        <div class="summary-badge summary-total">📦 ${totalUnitsSold} Unit${totalUnitsSold !== 1 ? 's' : ''} Sold</div>
+        <div class="summary-badge summary-in">🧾 ${totalTransactions} Transaction${totalTransactions !== 1 ? 's' : ''}</div>
+    `;
+
+    // Reset table headers for sales view
+    const tableHead = $('report-table').querySelector('thead tr');
+    tableHead.innerHTML = `
+        <th>Date &amp; Time</th>
+        <th>Sold By (Role)</th>
+        <th>Item</th>
+        <th>Category</th>
+        <th>Qty Sold</th>
+        <th>Remarks</th>
+    `;
+
+    const tbody = $('report-body');
+    if (!transactions.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="empty-row">No sales found for this period.</td></tr>`;
+        $('report-count').textContent = '';
+        return;
+    }
+
+    tbody.innerHTML = transactions.map(tx => `<tr>
+        <td style="white-space:nowrap;font-size:13px">${fmtDateTime(tx.created_at)}</td>
+        <td><strong>${escHtml(tx.user_name || '—')}</strong><span class="role-chip">${escHtml(tx.user_role || '—')}</span></td>
+        <td><strong>${escHtml(tx.item_name || '—')}</strong></td>
+        <td><span class="cat-tag">${escHtml(tx.category || '—')}</span></td>
+        <td style="font-weight:700;font-size:15px">${tx.quantity}</td>
+        <td><span class="badge badge-out-remark">▼ Stock Out</span></td>
+    </tr>`).join('');
+
+    $('report-count').textContent = `Total: ${totalTransactions} record${totalTransactions !== 1 ? 's' : ''} · ${totalUnitsSold} units sold`;
+}
+
+// Switch between inventory and sales reports
+function switchReportType(type, btn) {
+    // Update tab buttons
+    document.querySelectorAll('.report-tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    
+    // Show/hide filters
+    const inventoryFilters = $('inventory-filters');
+    const salesFilters = $('sales-filters');
+    
+    if (type === 'inventory') {
+        inventoryFilters.style.display = 'flex';
+        salesFilters.style.display = 'none';
+        $('report-results').style.display = 'none';
+    } else {
+        inventoryFilters.style.display = 'none';
+        salesFilters.style.display = 'block'; // Changed 'flex' to 'block'
+        $('report-results').style.display = 'none';
+        
+        // Load users if not already loaded
+        if (!allUsers.length) loadUsersForSalesReport();
+    }
 }
 
 async function generateReport() {
@@ -70,6 +179,110 @@ function renderReport(transactions, type, startDate, endDate) {
         </tr>`;
     }).join('');
     $('report-count').textContent = `Total: ${transactions.length} record${transactions.length !== 1 ? 's' : ''}`;
+}
+
+// Generate sales report
+async function generateSalesReport() {
+    const startDate = $('sales-start').value;
+    const endDate   = $('sales-end').value;
+    setMsg('report-error', '');
+    if (!startDate || !endDate) return setMsg('report-error', 'Please select both a start date and an end date.');
+    if (startDate > endDate)    return setMsg('report-error', 'Start date cannot be after end date.');
+
+    const btn = $('sales-generate-btn');
+    const t   = btn.querySelector('.btn-text');
+    const l   = btn.querySelector('.btn-loader');
+    t.style.display = 'none'; l.style.display = ''; btn.disabled = true;
+
+    try {
+        const endInclusive = new Date(endDate);
+        endInclusive.setDate(endInclusive.getDate() + 1);
+        const endStr = endInclusive.toISOString().split('T')[0];
+
+        let query = supabaseClient
+            .from('transactions')
+            .select('*')
+            .eq('type', 'stock_out')
+            .gte('created_at', startDate + 'T00:00:00')
+            .lt('created_at',  endStr + 'T00:00:00')
+            .order('created_at', { ascending: false });
+
+        const selectedUser = $('sales-user-select').value;
+        if (selectedUser) {
+            query = query.eq('user_name', selectedUser);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        t.style.display = ''; l.style.display = 'none'; btn.disabled = false;
+        renderSalesReport(data || [], startDate, endDate, selectedUser);
+
+    } catch (err) {
+        t.style.display = ''; l.style.display = 'none'; btn.disabled = false;
+        setMsg('report-error', 'Error generating sales report: ' + err.message);
+    }
+}
+
+function renderSalesReport(salesData, startDate, endDate, userId) {
+    const results = $('report-results');
+    results.style.display = 'block';
+    results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    const selectedUser = userId ? allUsers.find(u => u.id === userId) : null;
+    const userLabel = selectedUser ? selectedUser.name : 'All Users';
+    const fmt = d => new Date(d + 'T00:00:00').toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
+    
+    $('report-subtitle').textContent = `Sales Report · ${userLabel} · ${fmt(startDate)} — ${fmt(endDate)}`;
+
+    // Calculate totals
+    const totalRevenue = salesData.reduce((sum, sale) => sum + (sale.total || 0), 0);
+    const totalLabour = salesData.reduce((sum, sale) => sum + (sale.labour || 0), 0);
+    const totalItems = salesData.reduce((sum, sale) => sum + (sale.items ? sale.items.length : 0), 0);
+    const totalTransactions = salesData.length;
+
+    // Summary section
+    $('report-summary').innerHTML = `
+        <div class="summary-badge summary-total">💰 ${fmtPeso(totalRevenue)}</div>
+        <div class="summary-badge summary-in">📦 ${totalItems} Item${totalItems !== 1 ? 's' : ''} Sold</div>
+        <div class="summary-badge summary-out">🔧 ${fmtPeso(totalLabour)} Labour Charges</div>
+        <div class="summary-badge summary-total">🧾 ${totalTransactions} Transaction${totalTransactions !== 1 ? 's' : ''}</div>
+    `;
+
+    // Update table headers for sales report
+    const tableHead = $('report-table').querySelector('thead tr');
+    tableHead.innerHTML = `
+        <th>Date &amp; Time</th>
+        <th>Sold By</th>
+        <th>Customer</th>
+        <th>Items Sold</th>
+        <th>Labour</th>
+        <th>Total</th>
+    `;
+
+    const tbody = $('report-body');
+    if (!salesData.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="empty-row">No sales found for this period.</td></tr>`;
+        $('report-count').textContent = '';
+        return;
+    }
+
+    tbody.innerHTML = salesData.map(sale => {
+        const itemsList = sale.items ? sale.items.map(item => 
+            `${item.name} (${item.qty}x ${fmtPeso(item.retailPrice)})`
+        ).join(', ') : 'No items';
+        
+        return `<tr>
+            <td style="white-space:nowrap;font-size:13px">${fmtDateTime(sale.date)}</td>
+            <td><strong>${escHtml(sale.soldBy || '—')}</strong></td>
+            <td>${escHtml(sale.customer || '—')}</td>
+            <td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis">${escHtml(itemsList)}</td>
+            <td style="font-weight:700;color:var(--muted)">${sale.labour > 0 ? fmtPeso(sale.labour) : '—'}</td>
+            <td style="font-weight:700;font-size:15px;color:var(--green)">${fmtPeso(sale.total || 0)}</td>
+        </tr>`;
+    }).join('');
+    
+    $('report-count').textContent = `Total Sales: ${totalTransactions} transaction${totalTransactions !== 1 ? 's' : ''} · Revenue: ${fmtPeso(totalRevenue)}`;
 }
 
 function printReport() {

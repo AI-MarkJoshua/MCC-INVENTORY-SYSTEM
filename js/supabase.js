@@ -56,12 +56,17 @@ const fmtPeso = n => '₱' + parseFloat(n || 0).toFixed(2).replace(/\B(?=(\d{3})
 // ── LOG TRANSACTION ───────────────────────────────────────
 async function logTransaction(itemId, itemName, category, qty, type) {
     try {
+        // Get item details to include retail price
+        const item = allItems.find(i => i.id === itemId);
+        const retailPrice = item ? item.retail_price : 0; // Fixed: use retail_price not retailPrice
+        
         await supabaseClient.from('transactions').insert([{
             item_id:   itemId,
             item_name: itemName,
             category:  category || 'Others',
             quantity:  qty,
             type,
+            retail_price: retailPrice, // Add retail price for sales calculation
             user_id:   currentUser?.id || null,
             user_name: currentName || 'Unknown',
             user_role: currentRole || 'staff'
