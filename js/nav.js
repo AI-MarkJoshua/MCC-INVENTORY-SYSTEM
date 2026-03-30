@@ -90,7 +90,7 @@ function switchToReport(reportType) {
     } else if (reportType === 'sales') {
         if (reportTabs[1]) reportTabs[1].classList.add('active');
         if (inventoryFilters) inventoryFilters.style.display = 'none';
-        if (salesFilters) salesFilters.style.display = 'block';
+        if (salesFilters) salesFilters.style.display = 'flex';
         if (reportResults) reportResults.style.display = 'none';
         
         // Load users for sales report if not already loaded
