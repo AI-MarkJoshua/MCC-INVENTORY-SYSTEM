@@ -121,12 +121,21 @@ select option{background:#fff;color:var(--text)}
 .header-right{display:flex;align-items:center;gap:14px}
 .user-label{font-size:13px;color:var(--muted);font-weight:500;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-/* ── NAV TABS ── */
+/* ── NAVIGATION ── */
 .app-nav{display:flex;border-bottom:1px solid var(--border);padding:0 28px;background:#fff;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .app-nav::-webkit-scrollbar{display:none}
 .nav-tab{background:transparent;border:none;border-bottom:3px solid transparent;color:var(--muted);font-family:var(--display);font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:13px 20px;cursor:pointer;transition:all .2s;margin-bottom:-1px;white-space:nowrap;flex-shrink:0}
 .nav-tab:hover{color:var(--text)}
 .nav-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.nav-hierarchy{display:inline-block;position:relative}
+.main-item::after{content:'▼';font-size:10px;margin-left:6px;opacity:.7;transition:transform .2s}
+.main-item.active::after{transform:rotate(180deg)}
+.hierarchy-items{position:fixed;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);min-width:200px;z-index:99999;display:none;padding:0;margin-top:0}
+.hierarchy-items.show{display:block}
+.sub-item{display:block;font-size:12px;padding:10px 16px;color:var(--muted);text-decoration:none;border-bottom:1px solid rgba(226,230,237,.5);cursor:pointer;transition:all .15s}
+.sub-item:last-child{border-bottom:none}
+.sub-item:hover{color:var(--text);background:var(--surface2)}
+.sub-item.active{color:var(--accent);background:var(--surface2)}
 
 /* ── VIEWS ── */
 .view{display:none}.view.active{display:block}

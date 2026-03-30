@@ -92,14 +92,14 @@
         <button class="nav-tab active" onclick="switchView('dashboard')" id="tab-dashboard">📊 Dashboard</button>
         <button class="nav-tab"        onclick="switchView('inventory')" id="tab-inventory">📦 Inventory</button>
         <button class="nav-tab"        onclick="switchView('pos')"       id="tab-pos">🛒 POS</button>
-        <div class="nav-dropdown" id="reports-dropdown">
-            <button class="nav-tab" onclick="toggleReportsDropdown()">📋 Reports</button>
-            <div class="dropdown-menu" id="reports-menu">
-                <a href="#" onclick="switchToReport('inventory')" class="dropdown-item">📦 Inventory Report</a>
-                <a href="#" onclick="switchToReport('sales')" class="dropdown-item">💰 Sales Report</a>
+        <div class="nav-hierarchy" id="reports-hierarchy">
+            <button class="nav-tab main-item" onclick="toggleReportsHierarchy()" id="tab-reports">📋 Reports</button>
+            <div class="hierarchy-items" id="reports-items">
+                <button class="nav-tab sub-item" onclick="switchToReport('inventory')">📦 Inventory Report</button>
+                <button class="nav-tab sub-item" onclick="switchToReport('sales')">💰 Sales Report</button>
             </div>
         </div>
-        <button class="nav-tab"        onclick="switchView('accounts')"  id="tab-accounts" style="display:none">👥 Accounts</button>
+        <button class="nav-tab"        onclick="switchView('accounts')"  id="tab-accounts">👥 Accounts</button>
     </nav>
 
     <!-- ════════════════════════════════════════════════ -->
@@ -407,13 +407,7 @@
     <div id="view-reports" class="view">
         <div class="app-main">
             <div class="panel">
-                <h2 class="panel-title">Generate Report</h2>
-                <div class="report-type-tabs">
-                    <button class="report-tab-btn active" onclick="switchReportType('inventory');">📦 Inventory Report</button>
-                    <button class="report-tab-btn" onclick="switchReportType('sales');">💰 Sales Report</button>
-                </div>
-                
-                <!-- Inventory Report Filters -->
+                <h2 class="panel-title" id="report-title">Generate Report</h2>
                 <div id="inventory-filters" class="report-filters">
                     <div class="field flex1">
                         <label>Transaction Type</label>
