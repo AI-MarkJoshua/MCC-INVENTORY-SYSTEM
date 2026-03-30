@@ -1,6 +1,6 @@
 // ── POS MODULE ────────────────────────────────────────────
 
-let cart          = []; // [{itemId, name, retailPrice, qty, stock, category}]
+let cart          = []; // [{itemId, name, wholesalePrice, retailPrice, qty, stock, category}]
 let recentSales   = [];
 let lastReceiptData = null;
 
@@ -9,7 +9,7 @@ function initPOS() {
     if (!allItems.length) loadItems().then(() => setupPosSearch());
     else setupPosSearch();
     renderCart();
-    renderRecentSales();
+    // renderRecentSales(); // Removed from POS - will be moved to dashboard
 }
 
 // ── SEARCH DROPDOWN ───────────────────────────────────────
@@ -96,12 +96,13 @@ function addToCart(itemId) {
     if (existing) { existing.qty++; }
     else {
         cart.push({
-            itemId:      item.id,
-            name:        item.name,
-            retailPrice: item.retail_price || 0,
-            qty:         1,
-            stock:       item.quantity,
-            category:    item.category
+            itemId:        item.id,
+            name:          item.name,
+            wholesalePrice: item.wholesale_price || 0,
+            retailPrice:   item.retail_price || 0,
+            qty:           1,
+            stock:         item.quantity,
+            category:      item.category
         });
     }
 
@@ -138,6 +139,7 @@ function clearCart() {
     cart = [];
     $('pos-customer').value = '';
     $('pos-payment').value  = '';
+    $('pos-labour').value   = '';
     renderCart();
 }
 
@@ -162,6 +164,7 @@ function renderCart() {
                 <div style="font-weight:600;color:var(--text)">${escHtml(c.name)}</div>
                 <div style="font-size:11px;color:var(--muted)">${escHtml(c.category || '—')}</div>
             </td>
+            <td style="color:var(--muted);font-weight:600">${fmtPeso(c.wholesalePrice)}</td>
             <td style="color:var(--green);font-weight:600">${fmtPeso(c.retailPrice)}</td>
             <td>
                 <div class="qty-control">
@@ -184,15 +187,26 @@ function getCartTotal() {
     return cart.reduce((sum, c) => sum + (c.retailPrice * c.qty), 0);
 }
 
+function getLabourAmount() {
+    return parseFloat($('pos-labour')?.value) || 0;
+}
+
+function getGrandTotal() {
+    return getCartTotal() + getLabourAmount();
+}
+
 function updateCheckout() {
-    const total = getCartTotal();
-    $('checkout-subtotal').textContent = fmtPeso(total);
+    const subtotal = getCartTotal();
+    const labour   = getLabourAmount();
+    const total    = getGrandTotal();
+    
+    $('checkout-subtotal').textContent = fmtPeso(subtotal);
     $('checkout-total').textContent    = fmtPeso(total);
     calcChange();
 }
 
 function calcChange() {
-    const total   = getCartTotal();
+    const total   = getGrandTotal();
     const payment = parseFloat($('pos-payment')?.value) || 0;
     const change  = payment - total;
     const el      = $('change-amount');
@@ -216,8 +230,10 @@ function calcChange() {
 
 async function processCheckout() {
     if (!cart.length)  return setMsg('pos-msg', 'Cart is empty!', true);
-    const total   = getCartTotal();
-    const payment = parseFloat($('pos-payment')?.value) || 0;
+    const subtotal   = getCartTotal();
+    const labour     = getLabourAmount();
+    const total      = getGrandTotal();
+    const payment    = parseFloat($('pos-payment')?.value) || 0;
     if (payment < total) return setMsg('pos-msg', 'Payment amount is less than total.', true);
 
     const customer = $('pos-customer').value.trim() || 'Walk-in Customer';
@@ -236,6 +252,8 @@ async function processCheckout() {
         const receiptData = {
             customer,
             items:   [...cart],
+            subtotal,
+            labour,
             total,
             payment,
             change:  payment - total,
@@ -247,11 +265,12 @@ async function processCheckout() {
 
         recentSales.unshift({ ...receiptData, id: Date.now() });
         if (recentSales.length > 10) recentSales.pop();
-        renderRecentSales();
+        // renderRecentSales(); // Removed from POS - will be moved to dashboard
 
         cart = [];
         $('pos-customer').value = '';
         $('pos-payment').value  = '';
+        $('pos-labour').value   = '';
         renderCart();
         await loadItems();
 
@@ -290,8 +309,13 @@ function showReceipt(data) {
                     </tr>`).join('')}
                 </tbody>
             </table>
+            ${data.labour > 0 ? `
+                <div class="receipt-divider">- - - - - - - - - - - - - - - - - - - -</div>
+                <div class="receipt-row"><span>Labour Charges</span><span>${fmtPeso(data.labour)}</span></div>
+            ` : ''}
             <div class="receipt-divider">- - - - - - - - - - - - - - - - - - - -</div>
             <div class="receipt-totals">
+                ${data.labour > 0 ? `<div class="receipt-row"><span>Items Total</span><span>${fmtPeso(data.subtotal)}</span></div>` : ''}
                 <div class="receipt-row"><span>TOTAL</span><span class="receipt-total-num">${fmtPeso(data.total)}</span></div>
                 <div class="receipt-row"><span>CASH</span><span>${fmtPeso(data.payment)}</span></div>
                 <div class="receipt-row receipt-change-row"><span>CHANGE</span><span class="receipt-change-num">${fmtPeso(data.change)}</span></div>
@@ -357,8 +381,13 @@ function printReceipt() {
             <td style="text-align:right">${fmtPeso(c.retailPrice * c.qty)}</td>
         </tr>`).join('')}</tbody>
     </table>
+    ${d.labour > 0 ? `
+        <hr class="divider">
+        <div class="tot-row"><span>Labour Charges</span><span>${fmtPeso(d.labour)}</span></div>
+    ` : ''}
     <hr class="divider">
     <div class="totals">
+        ${d.labour > 0 ? `<div class="tot-row"><span>Items Total</span><span>${fmtPeso(d.subtotal)}</span></div>` : ''}
         <div class="tot-row total"><span>TOTAL</span><span>${fmtPeso(d.total)}</span></div>
         <div class="tot-row"><span>CASH</span><span>${fmtPeso(d.payment)}</span></div>
         <div class="tot-row change"><span>CHANGE</span><span>${fmtPeso(d.change)}</span></div>
