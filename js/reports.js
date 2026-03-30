@@ -37,8 +37,7 @@ function populateUserSelect() {
     if (!select) return;
     select.innerHTML = '<option value="">All Users</option>';
     allUsers.forEach(user => {
-        const roleIcon = user.user_role === 'admin' ? '👑' : '👷';
-        select.innerHTML += `<option value="${escHtml(user.user_name)}">${roleIcon} ${escHtml(user.user_name)}</option>`;
+        select.innerHTML += `<option value="${escHtml(user.user_name)}">${escHtml(user.user_name)}</option>`;
     });
 }
 
