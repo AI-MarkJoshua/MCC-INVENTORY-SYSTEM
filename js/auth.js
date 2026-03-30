@@ -68,6 +68,16 @@ async function initApp(user) {
     badge.textContent = currentRole.toUpperCase();
     badge.className   = `role-badge ${currentRole}`;
     $('tab-accounts').style.display = currentRole === 'admin' ? '' : 'none';
+    
+    // Hide POS and Reports from staff
+    if (currentRole !== 'admin') {
+        $('tab-pos').style.display = 'none';
+        $('reports-hierarchy').style.display = 'none';
+    } else {
+        $('tab-pos').style.display = '';
+        $('reports-hierarchy').style.display = '';
+    }
+    
     showScreen('app-screen');
     switchView('dashboard');
     loadItems();
