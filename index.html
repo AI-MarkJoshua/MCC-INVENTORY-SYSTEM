@@ -6,6 +6,7 @@
     <title>MCC Bike Inventory</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.5.1/css/all.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -89,17 +90,17 @@
     </header>
 
     <nav class="app-nav">
-        <button class="nav-tab active" onclick="switchView('dashboard')" id="tab-dashboard">📊 Dashboard</button>
-        <button class="nav-tab"        onclick="switchView('inventory')" id="tab-inventory">📦 Inventory</button>
-        <button class="nav-tab"        onclick="switchView('pos')"       id="tab-pos">🛒 POS</button>
+        <button class="nav-tab active" onclick="switchView('dashboard')" id="tab-dashboard"><i class="fas fa-chart-line"></i> Dashboard</button>
+        <button class="nav-tab"        onclick="switchView('inventory')" id="tab-inventory"><i class="fas fa-box"></i> Inventory</button>
+        <button class="nav-tab"        onclick="switchView('pos')"       id="tab-pos"><i class="fas fa-shopping-cart"></i> POS</button>
         <div class="nav-hierarchy" id="reports-hierarchy">
-            <button class="nav-tab main-item" onclick="toggleReportsHierarchy()" id="tab-reports">📋 Reports</button>
+            <button class="nav-tab main-item" onclick="toggleReportsHierarchy()" id="tab-reports"><i class="fas fa-file-alt"></i> Reports</button>
             <div class="hierarchy-items" id="reports-items">
-                <button class="nav-tab sub-item" onclick="switchToReport('inventory')">📦 Inventory Report</button>
-                <button class="nav-tab sub-item" onclick="switchToReport('sales')">💰 Sales Report</button>
+                <button class="nav-tab sub-item" onclick="switchToReport('inventory')"><i class="fas fa-box"></i> Inventory Report</button>
+                <button class="nav-tab sub-item" onclick="switchToReport('sales')"><i class="fas fa-dollar-sign"></i> Sales Report</button>
             </div>
         </div>
-        <button class="nav-tab"        onclick="switchView('accounts')"  id="tab-accounts">👥 Accounts</button>
+        <button class="nav-tab"        onclick="switchView('accounts')"  id="tab-accounts"><i class="fas fa-users"></i> Accounts</button>
     </nav>
 
     <!-- ════════════════════════════════════════════════ -->
@@ -146,7 +147,7 @@
         <div class="app-main">
             <div class="panel" id="stock-entry-panel">
                 <div class="panel-header">
-                    <h2 class="panel-title">📦 Stock Entry</h2>
+                    <h2 class="panel-title"><i class="fas fa-box"></i> Stock Entry</h2>
                     <div class="panel-subtitle">Manage your inventory items efficiently</div>
                 </div>
 
@@ -154,7 +155,7 @@
                     <!-- Item Information -->
                     <div class="form-section">
                         <div class="section-header">
-                            <div class="section-icon">📋</div>
+                            <div class="section-icon"><i class="fas fa-file"></i></div>
                             <div class="section-title">Item Information</div>
                         </div>
                         <div class="form-grid">
@@ -213,7 +214,7 @@
                     <!-- Stock & Pricing -->
                     <div class="form-section">
                         <div class="section-header">
-                            <div class="section-icon">💰</div>
+                            <div class="section-icon"><i class="fas fa-dollar-sign"></i></div>
                             <div class="section-title">Stock &amp; Pricing</div>
                         </div>
                         <div class="form-grid">
@@ -224,7 +225,7 @@
                                 </label>
                                 <div class="input-wrapper">
                                     <input type="number" id="item-qty" class="form-input" placeholder="0" min="1">
-                                    <div class="input-icon">📊</div>
+                                    <div class="input-icon"><i class="fas fa-chart-bar"></i></div>
                                 </div>
                             </div>
                             <div class="form-group">
@@ -235,7 +236,7 @@
                                 <div class="input-wrapper">
                                     <input type="number" id="item-wholesale" class="form-input"
                                         placeholder="0.00" min="0" step="0.01">
-                                    <div class="input-icon">💵</div>
+                                    <div class="input-icon"><i class="fas fa-money-bill"></i></div>
                                 </div>
                             </div>
                             <div class="form-group">
@@ -246,7 +247,7 @@
                                 <div class="input-wrapper">
                                     <input type="number" id="item-retail" class="form-input"
                                         placeholder="0.00" min="0" step="0.01">
-                                    <div class="input-icon">🏷️</div>
+                                    <div class="input-icon"><i class="fas fa-tag"></i></div>
                                 </div>
                             </div>
                         </div>
@@ -270,7 +271,7 @@
                 <div class="panel-header">
                     <h2 class="panel-title">Parts Inventory</h2>
                     <div class="search-wrap">
-                        <span class="search-icon">🔍</span>
+                        <span class="search-icon"><i class="fas fa-search"></i></span>
                         <input type="text" id="search" placeholder="Search parts..." oninput="filterItems()">
                     </div>
                 </div>
@@ -315,7 +316,7 @@
             <!-- LEFT: Search + Cart -->
             <div class="pos-left">
                 <div class="panel pos-search-panel">
-                    <h2 class="panel-title">🛒 Point of Sale</h2>
+                    <h2 class="panel-title"><i class="fas fa-shopping-cart"></i> Point of Sale</h2>
                     <div class="pos-customer-row">
                         <div class="field" style="flex:1">
                             <label>Customer Name <span style="color:var(--muted);font-weight:400">(optional)</span></label>
@@ -336,10 +337,10 @@
                 <div class="panel pos-cart-panel">
                     <div class="panel-header">
                         <h2 class="panel-title">Cart Items</h2>
-                        <button class="btn-clear-cart" onclick="clearCart()">🗑️ Clear Cart</button>
+                        <button class="btn-clear-cart" onclick="clearCart()"><i class="fas fa-trash"></i> Clear Cart</button>
                     </div>
                     <div id="cart-empty" class="cart-empty">
-                        <div class="cart-empty-icon">🛒</div>
+                        <div class="cart-empty-icon"><i class="fas fa-shopping-cart"></i></div>
                         <p>No items in cart yet.</p>
                         <p class="cart-empty-sub">Search for an item above to add it.</p>
                     </div>
@@ -364,7 +365,7 @@
             <!-- RIGHT: Checkout -->
             <div class="pos-right">
                 <div class="panel pos-checkout-panel">
-                    <h2 class="panel-title">💰 Checkout</h2>
+                    <h2 class="panel-title"><i class="fas fa-dollar-sign"></i> Checkout</h2>
                     <div class="checkout-summary">
                         <div class="checkout-row">
                             <span>Subtotal</span>
@@ -391,7 +392,7 @@
                         <div class="change-amount" id="change-amount">₱0.00</div>
                     </div>
                     <button class="btn-primary full btn-checkout" id="checkout-btn" onclick="processCheckout()">
-                        <span class="btn-text">✓ Process Sale</span>
+                        <span class="btn-text"><i class="fas fa-check"></i> Process Sale</span>
                         <span class="btn-loader" style="display:none">Processing...</span>
                     </button>
                     <p id="pos-msg" class="action-msg" style="margin-top:10px;text-align:center"></p>
@@ -407,7 +408,7 @@
     <div id="view-reports" class="view">
         <div class="app-main">
             <div class="panel">
-                <h2 class="panel-title" id="report-title">Generate Report</h2>
+                <h2 class="panel-title" id="report-title"><i class="fas fa-file-alt"></i> Generate Report</h2>
                 <div id="inventory-filters" class="report-filters">
                     <div class="field flex1">
                         <label>Transaction Type</label>
@@ -427,7 +428,7 @@
                     </div>
                     <div class="report-filter-btn">
                         <button class="btn-primary" id="report-generate-btn" onclick="generateReport()">
-                            <span class="btn-text">🔍 Generate</span>
+                            <span class="btn-text"><i class="fas fa-search"></i> Generate</span>
                             <span class="btn-loader" style="display:none">Loading...</span>
                         </button>
                     </div>
@@ -451,7 +452,7 @@
                     </div>
                     <div class="report-filter-btn">
                         <button class="btn-primary" id="sales-generate-btn" onclick="generateSalesReport()">
-                            <span class="btn-text">🔍 Generate</span>
+                            <span class="btn-text"><i class="fas fa-search"></i> Generate</span>
                             <span class="btn-loader" style="display:none">Loading...</span>
                         </button>
                     </div>
@@ -465,7 +466,7 @@
                         <h2 class="panel-title" style="margin-bottom:4px">Transaction Report</h2>
                         <p id="report-subtitle" class="report-subtitle"></p>
                     </div>
-                    <button class="btn-print" onclick="printReport()">🖨️ Print Report</button>
+                    <button class="btn-print" onclick="printReport()"><i class="fas fa-print"></i> Print Report</button>
                 </div>
                 <div class="report-summary" id="report-summary"></div>
                 <div class="table-wrap">
@@ -498,7 +499,7 @@
 
             <div class="account-form-card">
                 <div class="account-form-header">
-                    <div class="account-form-icon">👤</div>
+                    <div class="account-form-icon"><i class="fas fa-user"></i></div>
                     <div>
                         <h2 class="account-form-title">Create New Account</h2>
                         <p class="account-form-sub">Add a staff or admin account to the system</p>

@@ -57,9 +57,9 @@ function renderSalesReport(transactions, startDate, endDate, selectedUserName) {
     const totalTransactions = transactions.length;
 
     $('report-summary').innerHTML = `
-        <div class="summary-badge summary-total">💰 ${fmtPeso(totalRevenue)}</div>
-        <div class="summary-badge summary-in">📦 ${totalUnitsSold} Unit${totalUnitsSold !== 1 ? 's' : ''} Sold</div>
-        <div class="summary-badge summary-out">🧾 ${totalTransactions} Transaction${totalTransactions !== 1 ? 's' : ''}</div>
+        <div class="summary-badge summary-total">${fmtPeso(totalRevenue)}</div>
+        <div class="summary-badge summary-in">${totalUnitsSold} Unit${totalUnitsSold !== 1 ? 's' : ''} Sold</div>
+        <div class="summary-badge summary-out">${totalTransactions} Transaction${totalTransactions !== 1 ? 's' : ''}</div>
     `;
 
     // Update table headers for sales view
@@ -164,7 +164,7 @@ function renderReport(transactions, type, startDate, endDate) {
     const totalIn  = transactions.filter(t => t.type === 'stock_in').reduce((s, t) => s + t.quantity, 0);
     const totalOut = transactions.filter(t => t.type === 'stock_out').reduce((s, t) => s + t.quantity, 0);
     $('report-summary').innerHTML = `
-        <div class="summary-badge summary-total">📄 ${transactions.length} Transaction${transactions.length !== 1 ? 's' : ''}</div>
+        <div class="summary-badge summary-total">${transactions.length} Transaction${transactions.length !== 1 ? 's' : ''}</div>
         ${type !== 'stock_out' ? `<div class="summary-badge summary-in">▲ ${totalIn} unit${totalIn !== 1 ? 's' : ''} stocked in</div>` : ''}
         ${type !== 'stock_in'  ? `<div class="summary-badge summary-out">▼ ${totalOut} unit${totalOut !== 1 ? 's' : ''} stocked out</div>` : ''}`;
 

@@ -48,14 +48,14 @@ async function addStock() {
         const { error } = await supabaseClient.from('items').update(updates).eq('id', item.id);
         if (error) return setMsg('action-msg', error.message, true);
         itemId = item.id;
-        setMsg('action-msg', `✓ "${name}" updated — quantity now ${newQty}`);
+        setMsg('action-msg', `"${name}" updated — quantity now ${newQty}`);
     } else {
         const { data: inserted, error } = await supabaseClient.from('items')
             .insert([{ name, quantity: qty, category: category || 'Others', supplier: supplier || '', wholesale_price: wholesale, retail_price: retail }])
             .select().single();
         if (error) return setMsg('action-msg', error.message, true);
         itemId = inserted?.id;
-        setMsg('action-msg', `✓ Added ${qty} unit(s) of "${name}"`);
+        setMsg('action-msg', `Added ${qty} unit(s) of "${name}"`);
     }
     await logTransaction(itemId, name, category || 'Others', qty, 'stock_in');
     clearStockInputs();
@@ -78,7 +78,7 @@ async function removeStock() {
     const { error: upErr } = await supabaseClient.from('items').update({ quantity: newQty }).eq('id', item.id);
     if (upErr) return setMsg('action-msg', upErr.message, true);
     await logTransaction(item.id, item.name, item.category, qty, 'stock_out');
-    setMsg('action-msg', `✓ Removed ${qty} unit(s) of "${name}" — ${newQty} remaining`);
+    setMsg('action-msg', `Removed ${qty} unit(s) of "${name}" — ${newQty} remaining`);
     clearStockInputs();
     loadItems();
 }
@@ -121,8 +121,8 @@ function renderItems() {
             ? `<span class="badge badge-low">Low Stock</span>`
             : `<span class="badge badge-ok">In Stock</span>`;
         const actions = currentRole === 'admin'
-            ? `<button class="btn-action btn-edit" onclick="openEditModal(${item.id})">✏️ Edit</button>
-               <button class="btn-action btn-del"  onclick="openDeleteModal(${item.id},'${escHtml(item.name)}')">🗑️ Delete</button>`
+            ? `<button class="btn-action btn-edit" onclick="openEditModal(${item.id})"><i class="fas fa-edit"></i> Edit</button>
+               <button class="btn-action btn-del"  onclick="openDeleteModal(${item.id},'${escHtml(item.name)}')"><i class="fas fa-trash"></i> Delete</button>`
             : `<span style="color:var(--muted);font-size:12px">—</span>`;
         return `<tr>
             <td><strong>${escHtml(item.name)}</strong></td>

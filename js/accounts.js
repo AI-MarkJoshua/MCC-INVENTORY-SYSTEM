@@ -1,10 +1,10 @@
-// ── ACCOUNTS MODULE ───────────────────────────────────────
+// ACCOUNTS MODULE
 
 let allAccounts   = [];
 let accountFilter = 'all';
 let resetTargetEmail = null;
 
-// ── CREATE ACCOUNT ────────────────────────────────────────
+// CREATE ACCOUNT
 async function createAccount() {
     if (currentRole !== 'admin') return;
     const name  = $('new-name').value.trim();
@@ -28,13 +28,13 @@ async function createAccount() {
     }
 
     setLoading('create-btn', false);
-    setMsg('create-success', `✓ Account created for ${name} (${role})`);
+    setMsg('create-success', `Account created for ${name} (${role})`);
     ['new-name', 'new-email', 'new-password'].forEach(id => $(id).value = '');
     $('new-role').value = 'staff';
     loadAccounts();
 }
 
-// ── LOAD ACCOUNTS ─────────────────────────────────────────
+// LOAD ACCOUNTS
 async function loadAccounts() {
     if (currentRole !== 'admin') return;
     const container = $('accounts-list');
@@ -86,12 +86,12 @@ function renderAccounts() {
                 </div>
             </div>
             <div class="account-card-actions">
-                <button class="acc-btn acc-edit"  onclick="openEditAccountModal('${p.id}')">✏️ Edit</button>
-                <button class="acc-btn acc-reset" onclick="openResetModal('${escHtml(p.email || '')}')">🔑 Reset PW</button>
+                <button class="acc-btn acc-edit"  onclick="openEditAccountModal('${p.id}')"><i class="fas fa-edit"></i> Edit</button>
+                <button class="acc-btn acc-reset" onclick="openResetModal('${escHtml(p.email || '')}')"><i class="fas fa-key"></i> Reset PW</button>
                 ${!isSelf ? `
                 <button class="acc-btn ${isActive ? 'acc-deactivate' : 'acc-activate'}"
                     onclick="toggleAccountStatus('${p.id}', ${isActive})">
-                    ${isActive ? '🚫 Deactivate' : '✅ Activate'}
+                    ${isActive ? '<i class="fas fa-times-circle"></i> Deactivate' : '<i class="fas fa-check-circle"></i> Activate'}
                 </button>` : ''}
             </div>
         </div>`;
@@ -105,7 +105,7 @@ async function toggleAccountStatus(profileId, currentlyActive) {
     loadAccounts();
 }
 
-// ── EDIT ACCOUNT MODAL ────────────────────────────────────
+// EDIT ACCOUNT MODAL
 function openEditAccountModal(profileId) {
     const profile = allAccounts.find(a => a.id === profileId);
     if (!profile) return;
@@ -145,7 +145,7 @@ async function saveAccountEdit() {
     loadAccounts();
 }
 
-// ── RESET PASSWORD MODAL ──────────────────────────────────
+// RESET PASSWORD MODAL
 function openResetModal(email) {
     resetTargetEmail = email;
     $('reset-user-email').textContent = email;
@@ -170,6 +170,6 @@ async function confirmResetPassword() {
     });
     setLoading('reset-confirm-btn', false);
     if (error) return setMsg('reset-error', error.message);
-    setMsg('reset-success', `✓ Reset link sent to ${resetTargetEmail}`);
+    setMsg('reset-success', `Reset link sent to ${resetTargetEmail}`);
     setTimeout(() => { closeResetModal(); }, 2000);
 }

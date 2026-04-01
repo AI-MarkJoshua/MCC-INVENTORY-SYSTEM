@@ -21,7 +21,7 @@ async function sendResetEmail() {
     });
     setLoading('forgot-btn', false);
     if (error) return setMsg('forgot-error', error.message);
-    setMsg('forgot-success', '✓ Reset link sent! Check your email inbox.');
+    setMsg('forgot-success', 'Reset link sent! Check your email inbox.');
 }
 
 // ── LOGIN ─────────────────────────────────────────────────
@@ -202,7 +202,7 @@ async function submitNewPassword() {
     const { error } = await supabaseClient.auth.updateUser({ password: pw1 });
     setLoading('new-pw-btn', false);
     if (error) { if (errEl) errEl.textContent = error.message; return; }
-    if (sucEl) sucEl.textContent = '✓ Password updated! Redirecting to login...';
+    if (sucEl) sucEl.textContent = 'Password updated! Redirecting to login...';
     await supabaseClient.auth.signOut();
     isResettingPassword = false;
     setTimeout(() => {

@@ -1,4 +1,4 @@
-// ── DASHBOARD MODULE ──────────────────────────────────────
+// DASHBOARD MODULE
 
 let categoryChart = null;
 

@@ -175,7 +175,7 @@ function renderCart() {
             </td>
             <td style="font-weight:700;color:var(--text)">${fmtPeso(c.retailPrice * c.qty)}</td>
             <td>
-                <button class="btn-action btn-del" onclick="removeFromCart(${c.itemId})" style="padding:4px 8px;font-size:11px">✕</button>
+                <button class="btn-action btn-del" onclick="removeFromCart(${c.itemId})" style="padding:4px 8px;font-size:11px"><i class="fas fa-times"></i></button>
             </td>
         </tr>`).join('');
 
@@ -323,7 +323,7 @@ function showReceipt(data) {
             <div class="receipt-divider">- - - - - - - - - - - - - - - - - - - -</div>
             <div class="receipt-footer">
                 <p>Served by: ${escHtml(data.soldBy)}</p>
-                <p>Thank you for your purchase! 🚲</p>
+                <p>Thank you for your purchase!</p>
             </div>
         </div>`;
     $('receipt-modal').classList.add('active');
@@ -393,7 +393,7 @@ function printReceipt() {
         <div class="tot-row change"><span>CHANGE</span><span>${fmtPeso(d.change)}</span></div>
     </div>
     <hr class="divider">
-    <div class="footer"><p>Served by: ${escHtml(d.soldBy)}</p><p>Thank you! 🚲</p></div>
+    <div class="footer"><p>Served by: ${escHtml(d.soldBy)}</p><p>Thank you!</p></div>
     </body></html>`);
     win.document.close();
     win.onload = () => { win.focus(); win.print(); };

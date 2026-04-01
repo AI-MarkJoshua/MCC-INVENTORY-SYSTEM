@@ -67,9 +67,9 @@ function switchToReport(reportType) {
     const reportTitle = document.getElementById('report-title');
     if (reportTitle) {
         if (reportType === 'inventory') {
-            reportTitle.textContent = '📦 Inventory Report';
+            reportTitle.innerHTML = '<i class="fas fa-box"></i> Inventory Report';
         } else if (reportType === 'sales') {
-            reportTitle.textContent = '💰 Sales Report';
+            reportTitle.innerHTML = '<i class="fas fa-dollar-sign"></i> Sales Report';
         }
     }
     

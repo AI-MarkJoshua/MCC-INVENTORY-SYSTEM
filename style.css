@@ -1,6 +1,76 @@
 /* ── RESET ── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
+/* Font Awesome icon styling */
+i.far, i.fas {
+    display: inline-block;
+    margin-right: 6px;
+    font-size: 14px;
+    width: 14px;
+    text-align: center;
+    vertical-align: middle;
+    line-height: 1;
+}
+
+.nav-tab i.far, .nav-tab i.fas {
+    margin-right: 8px;
+    font-size: 16px;
+    vertical-align: middle;
+}
+
+.section-icon i.far, .section-icon i.fas {
+    margin-right: 0;
+    font-size: 18px;
+    vertical-align: middle;
+}
+
+.input-icon i.far, .input-icon i.fas {
+    margin-right: 0;
+    font-size: 14px;
+    color: var(--muted);
+    vertical-align: middle;
+}
+
+.search-icon i.far, .search-icon i.fas {
+    margin-right: 0;
+    font-size: 14px;
+    color: var(--muted);
+    vertical-align: middle;
+}
+
+.cart-empty-icon i.far, .cart-empty-icon i.fas {
+    margin-right: 0;
+    font-size: 48px;
+    color: var(--muted);
+    margin-bottom: 16px;
+    vertical-align: middle;
+}
+
+.account-form-icon i.far, .account-form-icon i.fas {
+    margin-right: 0;
+    font-size: 24px;
+    color: var(--accent);
+    vertical-align: middle;
+}
+
+.btn-action i.far, .btn-action i.fas {
+    margin-right: 4px;
+    font-size: 12px;
+    vertical-align: middle;
+}
+
+.acc-btn i.far, .acc-btn i.fas {
+    margin-right: 6px;
+    font-size: 12px;
+    vertical-align: middle;
+}
+
+.btn-text i.far, .btn-text i.fas {
+    margin-right: 6px;
+    font-size: 12px;
+    vertical-align: middle;
+}
+
 :root{
     --bg:#f0f2f5;--surface:#ffffff;--surface2:#f8f9fb;--border:#e2e6ed;
     --accent:#e07b00;--green:#16a34a;--red:#dc2626;--yellow:#d97706;--blue:#2563eb;
